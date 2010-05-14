@@ -8,12 +8,25 @@ set(charges
 )
 
 if (EIGEN2_FOUND)
-# if eigen is available, compile QEq and QTPIE charge models
-set(charges ${charges}
-        charges/qeq.cpp
-        charges/qtpie.cpp
-)
+    if (MSVC)
+        find_package(Boost)
+        if(Boost_FOUND)
+            include_directories(${Boost_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
+            add_definitions(-DUSE_BOOST -DHAVE_SHARED_POINTER)
+            set (COMPILE_QEQ TRUE)
+        endif(Boost_FOUND)
+    else (MSVC)
+        set (COMPILE_QEQ TRUE)
+    endif(MSVC)
 endif(EIGEN2_FOUND)
+
+# If eigen is available, compile QEq and QTPIE charge models
+# (with MSVC, BOOST is also required).
+if (COMPILE_QEQ)
+    set(charges ${charges}
+        charges/qeq.cpp
+        charges/qtpie.cpp)
+endif (COMPILE_QEQ)
 
 set(depict_srcs
     depict/depict.cpp

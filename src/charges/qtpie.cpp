@@ -20,6 +20,13 @@ GNU General Public License for more details.
 
 #include "qtpie.h"
 
+#ifdef _MSC_VER
+  #ifdef USE_BOOST
+    #include <boost/math/special_functions/erf.hpp>
+  #endif
+#endif
+
+
 using namespace std;
 
 namespace OpenBabel
