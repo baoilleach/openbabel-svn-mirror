@@ -84,16 +84,16 @@ namespace OpenBabel
     _ready = false;
   }
   void OBAlign::SetRefMol(const OBMol &refmol) {
-    vector<vector3> ref;
+    _refmol_coords.resize(0);
     for (int i=1; i<=refmol.NumAtoms(); ++i)
-      ref.push_back(refmol.GetAtom(i)->GetVector());
-    SetRef(ref);
+      _refmol_coords.push_back(refmol.GetAtom(i)->GetVector());
+    SetRef(_refmol_coords);
   }
   void OBAlign::SetTargetMol(const OBMol &targetmol) {
-    vector<vector3> target;
+    _targetmol_coords.resize(0);
     for (int i=1; i<=targetmol.NumAtoms(); ++i)
-      target.push_back(targetmol.GetAtom(i)->GetVector());
-    SetTarget(target);
+      _targetmol_coords.push_back(targetmol.GetAtom(i)->GetVector());
+    SetTarget(_targetmol_coords);
   }
   bool OBAlign::Align()
   {

@@ -49,6 +49,7 @@ namespace OpenBabel
     //void GetRotMatrix(matrix3x3 *rotMatrix);
     double GetRMSD();
     vector<vector3> GetAlignment();
+    const vector<vector3> * GetPRef() {return _pref;};
 
   private:
     bool _ready;
@@ -57,6 +58,8 @@ namespace OpenBabel
     Eigen::Vector3d _ref_centr;
     const vector<vector3> *_pref;
     const vector<vector3> *_ptarget;
+    vector<vector3> _refmol_coords;
+    vector<vector3> _targetmol_coords;
     Eigen::MatrixXd _result;
     Eigen::MatrixXd _mref, _mtarget;
     void VectorsToMatrix(const vector<vector3> *pcoords, Eigen::MatrixXd &coords);
