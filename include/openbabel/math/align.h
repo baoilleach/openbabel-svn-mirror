@@ -30,10 +30,11 @@ namespace OpenBabel
 {
   class OBAPI OBAlign {
   public: 
+    OBAlign();
     OBAlign(const OBMol &refmol, const OBMol &targetmol);
-    OBAlign(const OBMol &refmol, const OBMol &targetmol, const vector<double> wts);
+    //OBAlign(const OBMol &refmol, const OBMol &targetmol, const vector<double> wts);
     OBAlign(const vector<vector3> &ref, const vector<vector3> &target);
-    OBAlign(const vector<vector3> &ref, const vector<vector3> &target, const vector<double> wts);
+    //OBAlign(const vector<vector3> &ref, const vector<vector3> &target, const vector<double> wts);
 
     // Partial Setup
     void OBAlign::SetRef(const vector<vector3> &ref);

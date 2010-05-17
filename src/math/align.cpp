@@ -30,6 +30,9 @@ using namespace std;
 
 namespace OpenBabel
 {
+  OBAlign::OBAlign() {
+    _ready = false;
+  }
   OBAlign::OBAlign(const vector<vector3> &ref, const vector<vector3> &target)
   {
     SetRef(ref);
@@ -123,12 +126,6 @@ namespace OpenBabel
     Eigen::MatrixXd sqr = deviation.cwise().square();
     double sum = sqr.sum();
     _rmsd = sqrt( sum / sqr.size() );
-
-#ifdef VERBOSE_DEBUG
-    cout << "_result\n" << _result << "\n" << endl;
-    cout << "_mref\n" << _mref << "\n" << endl;
-    cout << "deviation\n" << deviation << "\n" << endl;
-#endif
 
     // Add back the centroid of the reference
     for (int i=0; i<N; ++i)
