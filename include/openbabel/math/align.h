@@ -38,6 +38,8 @@ namespace OpenBabel
     // Partial Setup
     void OBAlign::SetRef(const vector<vector3> &ref);
     void OBAlign::SetTarget(const vector<vector3> &target);
+    void OBAlign::SetRefMol(const OBMol &refmol);
+    void OBAlign::SetTargetMol(const OBMol &targetmol);
 
     // Run the algorithm
     bool Align();

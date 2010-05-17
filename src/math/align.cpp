@@ -35,7 +35,10 @@ namespace OpenBabel
     SetRef(ref);
     SetTarget(target);
   }
-
+  OBAlign::OBAlign(const OBMol &refmol, const OBMol &targetmol) {
+    SetRefMol(refmol);
+    SetTargetMol(targetmol);
+  }
   void OBAlign::VectorsToMatrix(const vector<vector3> *pcoords, Eigen::MatrixXd &coords) {
     
     vector<vector3>::size_type N = pcoords->size();
@@ -77,7 +80,18 @@ namespace OpenBabel
 
     _ready = false;
   }
-
+  void OBAlign::SetRefMol(const OBMol &refmol) {
+    vector<vector3> ref;
+    for (int i=1; i<=refmol.NumAtoms(); ++i)
+      ref.push_back(refmol.GetAtom(i)->GetVector());
+    SetRef(ref);
+  }
+  void OBAlign::SetTargetMol(const OBMol &targetmol) {
+    vector<vector3> target;
+    for (int i=1; i<=targetmol.NumAtoms(); ++i)
+      target.push_back(targetmol.GetAtom(i)->GetVector());
+    SetTarget(target);
+  }
   bool OBAlign::Align()
   {
     vector<vector3>::size_type N = _ptarget->size();

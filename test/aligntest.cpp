@@ -1,6 +1,7 @@
 #include "obtest.h"
 #include <openbabel/obconversion.h>
 #include <openbabel/math/align.h>
+#include <openbabel/math/matrix3x3.h>
 
 using namespace std;
 using namespace OpenBabel;
@@ -98,12 +99,44 @@ void test_RMSD()
   OB_ASSERT( fabs(rmsd - 0.0288675) < 1.0E-06 );
 }
 
+void test_alignMol(){
+  OBConversion conv;
+  bool success = conv.SetInFormat("xyz");
+  OB_REQUIRE( success );
+
+  OBMol mol;
+  success = conv.ReadFile(&mol, TESTDATADIR + string("test3d.xyz"));
+  OB_REQUIRE( success );
+
+  // Align molecule to itself
+  OBAlign align = OBAlign(mol, mol);
+  double rmsd = align.GetRMSD();
+  OB_ASSERT( fabs(rmsd) < 1.0E-6 );
+
+  // Rotate molecule and align it to itself
+  OBMol mol_b = mol;
+  matrix3x3 rot;
+  rot.RotAboutAxisByAngle(vector3(1.0, -0.3, 0.23), 67);
+  double rot_array[9];
+  rot.GetArray(rot_array);
+  mol_b.Rotate(rot_array);
+
+  // Assert that rotation has occured
+  OB_ASSERT( !mol_b.GetAtom(1)->GetVector().IsApprox(mol.GetAtom(1)->GetVector(), 1.0E-8) );
+
+  align.SetTargetMol(mol_b);
+  rmsd = align.GetRMSD();
+  OB_ASSERT( fabs(rmsd) < 1.0E-6 );
+}
+
 int main()
 {
 
   test_simpleAlign();
 
   test_RMSD();
+
+  test_alignMol();
 
   return 0;
 }
