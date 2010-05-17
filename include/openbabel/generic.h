@@ -482,7 +482,10 @@ namespace OpenBabel
     std::vector< std::vector< vector3 > >    _vDisplace;
     //! Additional data (as strings)
     std::vector<std::string>                 _vData;
-    
+    //! Store RotorKeys
+    std::vector<std::vector<int> >           _vvRotorKeys;
+
+
   public:
     OBConformerData();
     OBConformerData(const OBConformerData &);

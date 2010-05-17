@@ -550,6 +550,7 @@ namespace OpenBabel
     // conformer genereation (rotor search) variables
     int 	_current_conformer; //!< used to hold i for current conformer (needed by UpdateConformers)
     std::vector<double> _energies; //!< used to hold the energies for all conformers
+    std::vector<std::vector<int> > _rotorKeys; // !< used to how the rotor keys for all conformers
     // minimization variables
     double 	_econv, _e_n1; //!< Used for conjugate gradients and steepest descent(Initialize and TakeNSteps)
     int 	_cstep, _nsteps; //!< Used for conjugate gradients and steepest descent(Initialize and TakeNSteps)

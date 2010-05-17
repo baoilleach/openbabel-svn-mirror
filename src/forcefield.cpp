@@ -1314,6 +1314,7 @@ namespace OpenBabel
     OBRandom generator;
     generator.TimeSeed();
     _origLogLevel = _loglvl;
+    _rotorkeys.resize(0);
 
     if (_mol.GetCoordinates() == NULL)
       return;
