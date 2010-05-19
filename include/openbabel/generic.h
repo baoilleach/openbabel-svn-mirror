@@ -502,6 +502,7 @@ namespace OpenBabel
     void SetDisplacements(std::vector< std::vector< vector3 > > vd)
     { _vDisplace = vd; }
     void SetData(std::vector<std::string> vdat) { _vData = vdat; }
+    void SetRotorKeys(std::vector<std::vector <int> > vvrotorkeys) { _vvRotorKeys = vvrotorkeys; }
 
     std::vector<unsigned short> GetDimension() { return _vDimension; }
     std::vector<double>         GetEnergies()  { return _vEnergies; }
@@ -511,6 +512,7 @@ namespace OpenBabel
     std::vector< std::vector< vector3 > > GetDisplacements()
       {return _vDisplace;}
     std::vector<std::string>    GetData() { return _vData; }
+    std::vector<std::vector <int> > GetRotorKeys() { return _vvRotorKeys; }
 
   };
 

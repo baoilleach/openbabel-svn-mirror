@@ -1103,6 +1103,7 @@ namespace OpenBabel
         mol.SetData(new OBConformerData);
       OBConformerData *cd = (OBConformerData*) mol.GetData(OBGenericDataType::ConformerData);
       cd->SetEnergies(_energies);
+      cd->SetRotorKeys(_rotorkeys);
 
       //mol.SetEnergies(_energies);
     }
@@ -1200,6 +1201,7 @@ namespace OpenBabel
     OBRotor *rotor;
 
     _origLogLevel = _loglvl;
+    _rotorkeys.resize(0);
 
     rl.Setup(_mol);
     rotamers.SetBaseCoordinateSets(_mol);
@@ -1233,9 +1235,14 @@ namespace OpenBabel
     for (int i = 1; i < rl.Size() + 1; ++i, rotor = rl.NextRotor(ri)) // foreach rotor
       rotorKeys.AddRotor(rotor->GetResolution().size());
 
-    rotamers.AddRotamer(rotorKeys.GetKey());
-    while (rotorKeys.Next()) 
-      rotamers.AddRotamer(rotorKeys.GetKey());
+    vector<int> rk = rotorKeys.GetKey();
+    rotamers.AddRotamer(rk);
+    _rotorkeys.push_back(vector<int>(rk.begin() + 1, rk.end())); // Leave out the first element (always 0)
+    while (rotorKeys.Next()) {
+      rk = rotorKeys.GetKey();
+      rotamers.AddRotamer(rk);
+      _rotorkeys.push_back(vector<int>(rk.begin() + 1, rk.end()));
+    }
 
     rotamers.ExpandConformerList(_mol, _mol.GetConformers());
       
