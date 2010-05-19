@@ -1516,6 +1516,7 @@ namespace OpenBabel
     _mol.SetConformers(newConfs);
 
     _energies.clear(); // Wipe any energies from previous conformer generators
+    _rotorkeys.clear(); // Wipe previous rotorkeys
 
     if (!rl.Size()) { // only one conformer
       IF_OBFF_LOGLVL_LOW
@@ -1643,6 +1644,7 @@ namespace OpenBabel
         }
       }
       rotamers.SetCurrentCoordinates(_mol, rotorKey);
+      _rotorkeys.push_back(vector<int> (rotorKey.begin() + 1, rotorKey.end()));
       SetupPointers(); // update pointers to atom positions in the OBFFCalculation objects
 
       _loglvl = OBFF_LOGLVL_NONE;
