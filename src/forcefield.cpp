@@ -1550,7 +1550,7 @@ namespace OpenBabel
       OBFFLog("  INITIAL WEIGHTING OF ROTAMERS...\n\n");
     rotor = rl.BeginRotor(ri);
     for (int i = 1; i < rl.Size() + 1; ++i, rotor = rl.NextRotor(ri)) {
-      rotorKey[i] = -1; // no rotation (new in 2.2)
+      rotorKey[i] = 0; // first rotation value
     }
     
     rotor = rl.BeginRotor(ri);
@@ -1581,7 +1581,7 @@ namespace OpenBabel
         }
         energies.push_back(currentE);
       }
-      rotorKey[i] = -1; // back to the previous setting before we go to another rotor
+      rotorKey[i] = 0; // back to the previous setting before we go to another rotor
       
       weightSet.clear();
       // first loop through and calculate the relative populations from Boltzmann
@@ -1627,10 +1627,10 @@ namespace OpenBabel
       rotor = rl.BeginRotor(ri);
       for (int i = 1; i < rl.Size() + 1; ++i, rotor = rl.NextRotor(ri)) {
         // foreach rotor
-        rotorKey[i] = -1; // default = don't change dihedral
+        rotorKey[i] = 0; // default = start dihedral at first value
         randFloat = generator.NextFloat();
-        if (randFloat < defaultRotor) // should we just leave this rotor with default setting?
-          continue;
+        /*if (randFloat < defaultRotor) // should we just leave this rotor with default setting?
+          continue;*/
 
         randFloat = generator.NextFloat();
         total = 0.0;
