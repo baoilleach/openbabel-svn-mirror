@@ -149,19 +149,25 @@ void test_alignMolWithSym(){
   OBMol mol_b = mol;
 
   // Align mol to mol_b
-  OBAlign align = OBAlign(mol, mol_b);
+  OBAlign align = OBAlign(mol, mol_b, true);
   align.Align();
   double rmsd = align.GetRMSD();
   OB_ASSERT( fabs(rmsd) < 1.0E-6 );
 
-  // Swap atom #1 and #4 in mol_b
-  mol_b.RenumberAtoms
-  OBAlign align = OBAlign(mol, mol, true);
+  // Swap atom #1 and #4 in mol_b, and align again (also with symmetry)
+  vector<int> a(4);
+  a[0] = 4; a[1] = 2; a[2] = 3; a[3] = 1;
+  mol_b.RenumberAtoms(a);
+  align.SetTargetMol(mol_b);
   align.Align();
-  double rmsd = align.GetRMSD();
+  rmsd = align.GetRMSD();
   OB_ASSERT( fabs(rmsd) < 1.0E-6 );
-
   
+  // Now align without symmetry
+  align = OBAlign(mol, mol_b, false);
+  align.Align();
+  rmsd = align.GetRMSD();
+  OB_ASSERT( fabs(rmsd) > 1.0E-2 );
 
 }
 
