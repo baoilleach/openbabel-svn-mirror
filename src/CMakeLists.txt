@@ -47,6 +47,11 @@ set(math_srcs
     math/transform3d.cpp
     math/vector3.cpp
 )
+if (EIGEN2_FOUND)
+set(math_srcs ${math_srcs}
+      math/align.cpp
+)
+endif(EIGEN2_FOUND)
 
 set(ops
   ops/addpolarh.cpp
