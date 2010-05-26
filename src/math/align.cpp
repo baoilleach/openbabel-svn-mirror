@@ -21,6 +21,8 @@ GNU General Public License for more details.
 #include <vector>
 
 #include <openbabel/math/align.h>
+#include <openbabel/graphsym.h>
+#include <openbabel/permutation.h>
 #include <openbabel/math/vector3.h>
 #include <Eigen/Dense>
 
@@ -32,16 +34,22 @@ namespace OpenBabel
 {
   OBAlign::OBAlign() {
     _ready = false;
+    _symmetry = false;
   }
+
   OBAlign::OBAlign(const vector<vector3> &ref, const vector<vector3> &target)
   {
     SetRef(ref);
     SetTarget(target);
+    _symmetry = false;
   }
-  OBAlign::OBAlign(const OBMol &refmol, const OBMol &targetmol) {
+
+  OBAlign::OBAlign(const OBMol &refmol, const OBMol &targetmol, bool symmetry) {
     SetRefMol(refmol);
     SetTargetMol(targetmol);
+    _symmetry = symmetry;
   }
+
   void OBAlign::VectorsToMatrix(const vector<vector3> *pcoords, Eigen::MatrixXd &coords) {
     
     vector<vector3>::size_type N = pcoords->size();
@@ -83,29 +91,26 @@ namespace OpenBabel
 
     _ready = false;
   }
+
   void OBAlign::SetRefMol(const OBMol &refmol) {
+    _prefmol = &refmol;
     _refmol_coords.resize(0);
     for (int i=1; i<=refmol.NumAtoms(); ++i)
       _refmol_coords.push_back(refmol.GetAtom(i)->GetVector());
     SetRef(_refmol_coords);
   }
+
   void OBAlign::SetTargetMol(const OBMol &targetmol) {
     _targetmol_coords.resize(0);
     for (int i=1; i<=targetmol.NumAtoms(); ++i)
       _targetmol_coords.push_back(targetmol.GetAtom(i)->GetVector());
     SetTarget(_targetmol_coords);
   }
-  bool OBAlign::Align()
+
+  void OBAlign::SimpleAlign(Eigen::MatrixXd &mtarget)
   {
-    vector<vector3>::size_type N = _ptarget->size();
-
-    if (_pref->size() != N) {
-      // Warn!
-      return false;
-    }
-
     // Covariance matrix C = X times Y(t)
-    Eigen::Matrix3d C = _mref * _mtarget.transpose();
+    Eigen::Matrix3d C = _mref * mtarget.transpose();
     
     // Singular Value Decomposition of C into USV(t)
     Eigen::SVD<Eigen::Matrix3d> svd(C);
@@ -119,7 +124,7 @@ namespace OpenBabel
     _rotMatrix = svd.matrixV() * T * svd.matrixU().transpose();
     
     // Rotate target using rotMatrix
-    _result = _mtarget.transpose() * _rotMatrix;
+    _result = mtarget.transpose() * _rotMatrix;
     _result.transposeInPlace(); // To give 3xN matrix
 
     Eigen::MatrixXd deviation = _result - _mref;
@@ -128,8 +133,38 @@ namespace OpenBabel
     _rmsd = sqrt( sum / sqr.size() );
 
     // Add back the centroid of the reference
-    for (int i=0; i<N; ++i)
+    for (int i=0; i<_result.cols(); ++i)
       _result.col(i) += _ref_centr;
+  }
+
+  bool OBAlign::Align()
+  {
+    vector<vector3>::size_type N = _ptarget->size();
+
+    if (_pref->size() != N) {
+      // Warn!
+      return false;
+    }
+
+    if (!_symmetry)
+      SimpleAlign(_mtarget);
+    else {
+      Eigen::MatrixXd mtarget;
+      OBMol workmol = *_prefmol; // OBGraphSym requires non-const OBMol
+      OBGraphSym gs(&workmol); 
+      vector<unsigned int> sym_classes;
+      gs.GetSymmetry(sym_classes, true);
+      PermutationGroup pg = OpenBabel::findAutomorphisms(&workmol, sym_classes);
+
+      std::vector<Permutation>::const_iterator cit;
+      cout << "_mtarget\n" << _mtarget << "\n" << endl;
+      for (cit = pg.permutations.begin(); cit != pg.permutations.end(); ++cit) {
+        mtarget = _mtarget*cit->matrix().cast<double>(); // Permute the columns
+        cout << "mtarget\n" << mtarget << "\n" << endl;
+        SimpleAlign(mtarget);
+        cout << "RMSD\n" << _rmsd << endl;
+      }
+    }
 
     _ready = true;
     return true;
