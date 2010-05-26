@@ -142,28 +142,45 @@ namespace OpenBabel
     vector<vector3>::size_type N = _ptarget->size();
 
     if (_pref->size() != N) {
-      // Warn!
+      obErrorLog.ThrowError(__FUNCTION__, "Cannot align the reference and target as they are of different size" , obError);
       return false;
     }
 
     if (!_symmetry)
       SimpleAlign(_mtarget);
-    else {
-      Eigen::MatrixXd mtarget;
+    else {  
+      // Find the automorphisms of the Reference Molecule
       OBMol workmol = *_prefmol; // OBGraphSym requires non-const OBMol
       OBGraphSym gs(&workmol); 
       vector<unsigned int> sym_classes;
       gs.GetSymmetry(sym_classes, true);
+      // FIXME - check where there are any duplicate classes - if not, just call SimpleAlign at this point
       PermutationGroup pg = OpenBabel::findAutomorphisms(&workmol, sym_classes);
 
+      // ...for storing the best result
+      double min_rmsd = DBL_MAX;
+      Eigen::MatrixXd result, rotMatrix;
+
+      // Try all of the symmetry-allowed permutations
       std::vector<Permutation>::const_iterator cit;
+      Eigen::MatrixXd mtarget;
       cout << "_mtarget\n" << _mtarget << "\n" << endl;
       for (cit = pg.permutations.begin(); cit != pg.permutations.end(); ++cit) {
         mtarget = _mtarget*cit->matrix().cast<double>(); // Permute the columns
         cout << "mtarget\n" << mtarget << "\n" << endl;
         SimpleAlign(mtarget);
         cout << "RMSD\n" << _rmsd << endl;
+        if (_rmsd < min_rmsd) {
+          min_rmsd = _rmsd;
+          result = _result;
+          rotMatrix = _rotMatrix;
+        }
       }
+
+      // Restore the best answer from memory
+      _rmsd = min_rmsd;
+      _result = result;
+      _rotMatrix = rotMatrix;
     }
 
     _ready = true;
@@ -187,7 +204,7 @@ namespace OpenBabel
 
   double OBAlign::GetRMSD() {
     if (!_ready) {
-      // Warn!
+      obErrorLog.ThrowError(__FUNCTION__, "RMSD not available until you call Align()" , obError);
       return (double) NULL;
     }
     

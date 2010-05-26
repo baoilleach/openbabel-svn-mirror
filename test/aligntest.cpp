@@ -2,6 +2,7 @@
 #include <openbabel/obconversion.h>
 #include <openbabel/math/align.h>
 #include <openbabel/math/matrix3x3.h>
+#include <openbabel/builder.h>
 
 using namespace std;
 using namespace OpenBabel;
@@ -108,8 +109,9 @@ void test_alignMol(){
   success = conv.ReadFile(&mol, TESTDATADIR + string("test3d.xyz"));
   OB_REQUIRE( success );
 
-  // Align molecule to itself
-  OBAlign align = OBAlign(mol, mol);
+  // Align molecule to itself (not using symmetry)
+  OBAlign align = OBAlign(mol, mol, false);
+  align.Align();
   double rmsd = align.GetRMSD();
   OB_ASSERT( fabs(rmsd) < 1.0E-6 );
 
@@ -125,8 +127,42 @@ void test_alignMol(){
   OB_ASSERT( !mol_b.GetAtom(1)->GetVector().IsApprox(mol.GetAtom(1)->GetVector(), 1.0E-8) );
 
   align.SetTargetMol(mol_b);
+  align.Align();
   rmsd = align.GetRMSD();
   OB_ASSERT( fabs(rmsd) < 1.0E-6 );
+}
+
+void test_alignMolWithSym(){
+  OBConversion conv;
+  OB_REQUIRE( conv.SetInFormat("smi") );
+
+  OBMol mol;
+  OB_REQUIRE( conv.ReadString(&mol, "ClC(=O)Cl") );
+
+  OBBuilder builder;
+  OB_REQUIRE( builder.Build(mol) );
+
+  // Offset Atom#1
+  OBAtom *patom = mol.GetAtom(1);
+  patom->SetVector( patom->GetVector() + vector3(.1, .1, .1) );
+
+  OBMol mol_b = mol;
+
+  // Align mol to mol_b
+  OBAlign align = OBAlign(mol, mol_b);
+  align.Align();
+  double rmsd = align.GetRMSD();
+  OB_ASSERT( fabs(rmsd) < 1.0E-6 );
+
+  // Swap atom #1 and #4 in mol_b
+  mol_b.RenumberAtoms
+  OBAlign align = OBAlign(mol, mol, true);
+  align.Align();
+  double rmsd = align.GetRMSD();
+  OB_ASSERT( fabs(rmsd) < 1.0E-6 );
+
+  
+
 }
 
 int main()
@@ -137,6 +173,8 @@ int main()
   test_RMSD();
 
   test_alignMol();
+
+  test_alignMolWithSym();
 
   return 0;
 }
