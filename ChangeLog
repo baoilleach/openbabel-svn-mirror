@@ -1,3 +1,55 @@
+2010-05-24  Noel O'Boyle
+
+	* test/testsym.py: Change CML roundtrip test to use temporary file to
+	avoid problems on Linux (bug submitted). I notice that a new problem
+	has arisen, which I need to sort out.
+
+2010-05-24  Noel O'Boyle
+
+	* src/dlhandler_unix.cpp: Added code for MinGW. Now can find formats,
+	even when run from build tree (set BABEL_LIBDIR).
+	* src/dlhandler_win32.cpp: Removed code for Cygwin and MinGW, and a
+	commented out section
+	* src/formats/CMakeLists.txt: Removed XML formats from MINIMAL_BUILD
+
+2010-05-23  Marcus D. Hanwell <marcus@cryos.org>
+
+	* CMakeLists.txt, OpenBabel2Config.cmake.in, src/CMakeLists.txt,
+	src/formats/inchi103/CMakeLists.txt: Make and configure a config file
+	suitable for installation too.
+
+	* include/openbabel/reaction.h: Fixed a compilation failure I
+	was hitting with GCC 4.5, std::tr1::shared_ptr was not found.
+
+	* CMakeLists.txt, include/CMakeLists.txt, src/CMakeLists.txt,
+	src/formats/CMakeLists.txt, src/formats/inchi103/CMakeLists.txt,
+	OpenBabel2Config.cmake.in, OpenBabel2ConfigVersion.cmake.in:
+	Refactored some parts of the build system, added my first pass
+	at an OpenBabel2Config file and friends. This currently supports
+	building against a build treee, installation tree logic later.
+
+
+2010-05-22  Noel O'Boyle
+
+	* CMakeLists.txt, src/CMakeLists.txt: Re-enable support for Cygwin. I
+	just needed to change Cygwin to use dlhandler_unix.cpp instead of
+	dlhandler_win32.cpp. (Note to self: need to sort out Mingw now, and
+	then remove Cygwin specific code from dlhandler_win32.cpp)
+
+2010-05-20  Geoffrey Hutchison  <babel@geoffhutchison.net>
+
+	* CMakeLists.txt, src/formats/CMakeLists.txt: Fix support for
+	formats using shared pointers and GCC-4.x without boost.
+
+	* include/openbabel/mol.h, src/mol.cpp: Add revised RenumberAtoms
+	method which uses integer atom indexes for use in scripting
+	bindings.
+
+2010-05-18  Konstantin Tokarev  <annulen@yandex.ru>
+
+    * src/formats/xml/cmlformat.cpp: Add support for reading and writing
+    of custom labels, colors, and radii of atoms
+
 2010-05-12  Geoffrey Hutchison  <babel@geoffhutchison.net>
 
 	* src/formats/mol2format.cpp: Add support for reading charge model

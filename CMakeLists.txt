@@ -19,13 +19,10 @@ set(BABEL_MAJ_VER   2)
 set(BABEL_MIN_VER   2)
 set(BABEL_PATCH_VER 99)
 
-# Why is this so? Do we want to keep using a different name for the Windows
-# DLL? On the one hand it has been this way for a while...
-if(WIN32)
-  set(BABEL_LIBRARY   openbabel-2)
-else(WIN32)
-  set(BABEL_LIBRARY   openbabel)
-endif(WIN32)
+# This should be phased out in preference for just using the target name
+set(BABEL_LIBRARY openbabel)
+
+# This would be better handled with external projects...
 if(EMBED_OPENBABEL)
   set(BABEL_VERSION  "${BABEL_MAJ_VER}.${BABEL_MIN_VER}.${BABEL_PATCH_VER}" PARENT_SCOPE)
 else(EMBED_OPENBABEL)
@@ -66,6 +63,10 @@ else(UNIX) # Windows - bin dir = lib dir to load libraries
     endif(ENABLE_VERSIONED_FORMATS)
   endif(MSVC)
 endif(UNIX)
+set(OB_INCLUDE_DIRS "include/openbabel-2.0")
+set(OB_EXPORTS_FILE "${openbabel_BINARY_DIR}/OpenBabel2_EXPORTS.cmake")
+# Ensure a fresh file is made each time CMake is run
+file(REMOVE "${OB_EXPORTS_FILE}")
 
 # Place binaries and libraries in the root of the build directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
@@ -150,7 +151,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     macro_ensure_version("4.2.0" "${_gcc_version}" GCC_IS_NEWER_THAN_4_2)
 endif(CMAKE_COMPILER_IS_GNUCXX)
 
-if(NOT WIN32)
+if(NOT MSVC)
   SET(CMAKE_REQUIRED_FLAGS -Werror)
   check_c_source_compiles("
    #include <sys/types.h>
@@ -192,7 +193,7 @@ if(NOT WIN32)
       set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden")
     endif (HAVE_GCC_VISIBILITY AND GCC_IS_NEWER_THAN_4_2 AND NOT _GCC_COMPILED_WITH_BAD_ALLOCATOR)
   endif (CMAKE_COMPILER_IS_GNUCXX AND NOT APPLE)
-endif(NOT WIN32)
+endif(NOT MSVC)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
   if(NOT GCC_IS_NEWER_THAN_4_0) # GCC 3.x
@@ -200,9 +201,12 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     if(Boost_FOUND)
       include_directories(${Boost_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
       add_definitions(-DUSE_BOOST -DHAVE_SHARED_POINTER)
+      set(SHARED_POINTER true)
     else(Boost_FOUND)
       message(FATAL_ERROR "Boost is required to compile OpenBabel with GCC 3.x")
     endif(Boost_FOUND)
+  else(NOT GCC_IS_NEWER_THAN_4_0)
+    set(SHARED_POINTER true)
   endif(NOT GCC_IS_NEWER_THAN_4_0)
 endif(CMAKE_COMPILER_IS_GNUCXX)
 
@@ -245,6 +249,7 @@ endif(${CMAKE_CXX_COMPILER_ID} MATCHES Intel AND UNIX)
 if(MSVC90)
   # To be added: AND SP1  OR gcc>4.0
   add_definitions(-DHAVE_SHARED_POINTER)
+  set(SHARED_POINTER true)
 endif(MSVC90)
 
 # Some rpath handling for Linux and Mac
@@ -276,11 +281,15 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 endif (CMAKE_COMPILER_IS_GNUCXX)
 
 file(GLOB_RECURSE headers include/openbabel/*.h)
-configure_file(${openbabel_SOURCE_DIR}/src/config.h.cmake ${openbabel_BINARY_DIR}/include/openbabel/babelconfig.h)
-install(FILES ${openbabel_BINARY_DIR}/include/openbabel/babelconfig.h DESTINATION include/openbabel-2.0/openbabel)
+configure_file(${openbabel_SOURCE_DIR}/src/config.h.cmake
+  ${openbabel_BINARY_DIR}/include/openbabel/babelconfig.h)
+install(FILES ${openbabel_BINARY_DIR}/include/openbabel/babelconfig.h
+  DESTINATION include/openbabel-2.0/openbabel)
 if(NOT MSVC)
-  configure_file(${openbabel_SOURCE_DIR}/openbabel-2.0.pc.cmake ${openbabel_BINARY_DIR}/openbabel-2.0.pc @ONLY)
-  install(FILES ${openbabel_BINARY_DIR}/openbabel-2.0.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+  configure_file(${openbabel_SOURCE_DIR}/openbabel-2.0.pc.cmake
+    ${openbabel_BINARY_DIR}/openbabel-2.0.pc @ONLY)
+  install(FILES ${openbabel_BINARY_DIR}/openbabel-2.0.pc
+    DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 endif(NOT MSVC)
 
 include_directories(${openbabel_BINARY_DIR}/include
@@ -340,3 +349,37 @@ add_subdirectory(scripts)
 # A minimal build with just two formats (SMI, SDF) useful for developers
 option(MINIMAL_BUILD "Disable full build" OFF)
 
+# Create the Config and ConfigVersion files in the build directory, useful to
+# build against an uninstalled OpenBabel build. Simply set OpenBabel2_DIR to
+# point at the build directory and call find_package(OpenBabel2)
+set(OpenBabel2_INCLUDE_DIRS
+  "${openbabel_SOURCE_DIR}/include"
+  "${openbabel_BINARY_DIR}/include")
+configure_file("${openbabel_SOURCE_DIR}/OpenBabel2Config.cmake.in"
+  "${openbabel_BINARY_DIR}/OpenBabel2Config.cmake" @ONLY)
+configure_file("${openbabel_SOURCE_DIR}/OpenBabel2ConfigVersion.cmake.in"
+  "${openbabel_BINARY_DIR}/OpenBabel2ConfigVersion.cmake" @ONLY)
+
+# Now to configure the installed config file.
+set(OB_CONFIG_DIR "${LIB_INSTALL_DIR}/openbabel")
+set(OpenBabel2_INCLUDE_DIRS "\${OpenBabel2_INSTALL_PREFIX}/${OB_INCLUDE_DIRS}")
+set(OB_EXPORTS_FILE
+  "\${OpenBabel2_INSTALL_PREFIX}/${OB_CONFIG_DIR}/OpenBabel2_EXPORTS.cmake")
+set(REL_REF)
+if(NOT WIN32)
+  set(REL_REF "/../..")
+endif(NOT WIN32)
+configure_file("${openbabel_SOURCE_DIR}/OpenBabel2Config.cmake.in"
+  "${openbabel_BINARY_DIR}/OpenBabel2ConfigInstall.cmake" @ONLY)
+
+install(EXPORT openbabel-targets
+  DESTINATION "${OB_CONFIG_DIR}"
+  FILE OpenBabel2_EXPORTS.cmake
+  COMPONENT Development)
+install(FILES "${openbabel_BINARY_DIR}/OpenBabel2ConfigInstall.cmake"
+  DESTINATION ${OB_CONFIG_DIR}
+  COMPONENT Development
+  RENAME OpenBabel2Config.cmake)
+install(FILES "${openbabel_BINARY_DIR}/OpenBabel2ConfigVersion.cmake"
+  DESTINATION ${OB_CONFIG_DIR}
+  COMPONENT Development)
