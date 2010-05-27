@@ -154,33 +154,39 @@ namespace OpenBabel
       OBGraphSym gs(&workmol); 
       vector<unsigned int> sym_classes;
       gs.GetSymmetry(sym_classes, true);
-      // FIXME - check where there are any duplicate classes - if not, just call SimpleAlign at this point
-      PermutationGroup pg = OpenBabel::findAutomorphisms(&workmol, sym_classes);
 
-      // ...for storing the best result
-      double min_rmsd = DBL_MAX;
-      Eigen::MatrixXd result, rotMatrix;
-
-      // Try all of the symmetry-allowed permutations
-      std::vector<Permutation>::const_iterator cit;
-      Eigen::MatrixXd mtarget;
-      cout << "_mtarget\n" << _mtarget << "\n" << endl;
-      for (cit = pg.permutations.begin(); cit != pg.permutations.end(); ++cit) {
-        mtarget = _mtarget*cit->matrix().cast<double>(); // Permute the columns
-        cout << "mtarget\n" << mtarget << "\n" << endl;
-        SimpleAlign(mtarget);
-        cout << "RMSD\n" << _rmsd << endl;
-        if (_rmsd < min_rmsd) {
-          min_rmsd = _rmsd;
-          result = _result;
-          rotMatrix = _rotMatrix;
-        }
+      // Does any symmetry class occur twice?
+      vector<unsigned int> x = sym_classes;
+      sort(x.begin(), x.end());
+      if (adjacent_find( x.begin(), x.end() ) == x.end()) { // No duplicate symmetry classes
+        SimpleAlign(_mtarget);
       }
+      else { // Get the isomorphisms and iterate over them
+    
+        // ...for storing the results from the lowest rmsd to date
+        double min_rmsd = DBL_MAX;
+        Eigen::MatrixXd result, rotMatrix;
 
-      // Restore the best answer from memory
-      _rmsd = min_rmsd;
-      _result = result;
-      _rotMatrix = rotMatrix;
+        // Try all of the symmetry-allowed permutations
+        PermutationGroup pg = OpenBabel::findAutomorphisms(&workmol, sym_classes);
+        std::vector<Permutation>::const_iterator cit;
+        Eigen::MatrixXd mtarget;
+        
+        for (cit = pg.permutations.begin(); cit != pg.permutations.end(); ++cit) {
+          mtarget = _mtarget*cit->matrix().cast<double>(); // Permute the columns
+          SimpleAlign(mtarget);
+          if (_rmsd < min_rmsd) {
+            min_rmsd = _rmsd;
+            result = _result;
+            rotMatrix = _rotMatrix;
+          }
+        }
+
+        // Restore the best answer from memory
+        _rmsd = min_rmsd;
+        _result = result;
+        _rotMatrix = rotMatrix;
+      }
     }
 
     _ready = true;
