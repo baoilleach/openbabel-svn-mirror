@@ -31,7 +31,7 @@ namespace OpenBabel
   class OBAPI OBAlign {
   public: 
     OBAlign();
-    OBAlign(const OBMol &refmol, const OBMol &targetmol, bool symmetry=true);
+    OBAlign(const OBMol &refmol, const OBMol &targetmol, bool includeH=false, bool symmetry=true);
     //OBAlign(const OBMol &refmol, const OBMol &targetmol, const vector<double> wts);
     OBAlign(const vector<vector3> &ref, const vector<vector3> &target);
     //OBAlign(const vector<vector3> &ref, const vector<vector3> &target, const vector<double> wts);
@@ -54,10 +54,12 @@ namespace OpenBabel
   private:
     bool _ready;
     bool _symmetry;
+    bool _includeH;
     double _rmsd;
     const OBMol* _prefmol;
+    const OBMol* _ptargetmol;
     Eigen::MatrixXd _rotMatrix;
-    Eigen::Vector3d _ref_centr;
+    Eigen::Vector3d _ref_centr, _target_centr;
     const vector<vector3> *_pref;
     const vector<vector3> *_ptarget;
     vector<vector3> _refmol_coords;

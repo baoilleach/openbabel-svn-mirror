@@ -35,6 +35,7 @@ namespace OpenBabel
   OBAlign::OBAlign() {
     _ready = false;
     _symmetry = false;
+    _includeH = false;
   }
 
   OBAlign::OBAlign(const vector<vector3> &ref, const vector<vector3> &target)
@@ -44,10 +45,11 @@ namespace OpenBabel
     _symmetry = false;
   }
 
-  OBAlign::OBAlign(const OBMol &refmol, const OBMol &targetmol, bool symmetry) {
+  OBAlign::OBAlign(const OBMol &refmol, const OBMol &targetmol, bool includeH, bool symmetry) {
+    _symmetry = symmetry;
+    _includeH = includeH;
     SetRefMol(refmol);
     SetTargetMol(targetmol);
-    _symmetry = symmetry;
   }
 
   void OBAlign::VectorsToMatrix(const vector<vector3> *pcoords, Eigen::MatrixXd &coords) {
@@ -87,7 +89,7 @@ namespace OpenBabel
   void OBAlign::SetTarget(const vector<vector3> &target) {
     _ptarget = &target;
     VectorsToMatrix(_ptarget, _mtarget);
-    MoveToOrigin(_mtarget); // No need to store this centroid
+    _target_centr = MoveToOrigin(_mtarget);
 
     _ready = false;
   }
@@ -95,15 +97,24 @@ namespace OpenBabel
   void OBAlign::SetRefMol(const OBMol &refmol) {
     _prefmol = &refmol;
     _refmol_coords.resize(0);
-    for (int i=1; i<=refmol.NumAtoms(); ++i)
-      _refmol_coords.push_back(refmol.GetAtom(i)->GetVector());
+    OBAtom const *atom;
+    for (int i=1; i<=refmol.NumAtoms(); ++i) {
+      atom = refmol.GetAtom(i);
+      if (_includeH || !atom->IsHydrogen())
+        _refmol_coords.push_back(atom->GetVector());
+    }
     SetRef(_refmol_coords);
   }
 
   void OBAlign::SetTargetMol(const OBMol &targetmol) {
+    _ptargetmol = &targetmol;
     _targetmol_coords.resize(0);
-    for (int i=1; i<=targetmol.NumAtoms(); ++i)
-      _targetmol_coords.push_back(targetmol.GetAtom(i)->GetVector());
+    OBAtom const *atom;
+    for (int i=1; i<=targetmol.NumAtoms(); ++i) {
+      atom = targetmol.GetAtom(i);
+      if (_includeH || !atom->IsHydrogen())
+        _targetmol_coords.push_back(atom->GetVector());
+    }
     SetTarget(_targetmol_coords);
   }
 
@@ -132,9 +143,6 @@ namespace OpenBabel
     double sum = sqr.sum();
     _rmsd = sqrt( sum / sqr.size() );
 
-    // Add back the centroid of the reference
-    for (int i=0; i<_result.cols(); ++i)
-      _result.col(i) += _ref_centr;
   }
 
   bool OBAlign::Align()
@@ -146,14 +154,22 @@ namespace OpenBabel
       return false;
     }
 
-    if (!_symmetry)
+    if (!_symmetry) {
       SimpleAlign(_mtarget);
+    }
     else {  
       // Find the automorphisms of the Reference Molecule
       OBMol workmol = *_prefmol; // OBGraphSym requires non-const OBMol
-      OBGraphSym gs(&workmol); 
+
+      OBBitVec* frag_atoms = new OBBitVec(workmol.NumAtoms());
+      FOR_ATOMS_OF_MOL(a, workmol)
+        if (_includeH || !a->IsHydrogen())
+          frag_atoms->SetBitOn(a->GetIdx());
+      
+      OBGraphSym gs(&workmol, frag_atoms); 
       vector<unsigned int> sym_classes;
       gs.GetSymmetry(sym_classes, true);
+      // delete frag_atoms; // Necessary?
 
       // Does any symmetry class occur twice?
       vector<unsigned int> x = sym_classes;
@@ -194,16 +210,44 @@ namespace OpenBabel
   }
 
   vector<vector3> OBAlign::GetAlignment() {
+    vector<vector3> aligned_coords;
     if (!_ready) {
       // Warn!
-      return (vector<vector3>) NULL;
+      return aligned_coords;
     }
 
-    // Convert result from MatrixXd to vector<vector3>
-    vector<vector3> aligned_coords;
-    aligned_coords.reserve(_result.cols());
-    for (int i=0; i<_result.cols(); ++i)
-      aligned_coords.push_back(vector3(_result(0, i), _result(1, i), _result(2, i)));
+    if (!_prefmol || _includeH) {
+      // Add back the centroid of the reference and convert to vv3
+      Eigen::Vector3d tmp;
+      aligned_coords.reserve(_result.cols());
+      for (int i=0; i<_result.cols(); ++i) {
+        tmp = _result.col(i) + _ref_centr;
+        aligned_coords.push_back(vector3(tmp(0), tmp(1), tmp(2)));
+      }
+    }
+    else { // Need to deal with the case where hydrogens were excluded
+      vector<vector3> target_coords;
+      for (int i=1; i<=_ptargetmol->NumAtoms(); ++i)
+        target_coords.push_back(_ptargetmol->GetAtom(i)->GetVector());
+      Eigen::MatrixXd mtarget;
+      VectorsToMatrix(&target_coords, mtarget);
+
+      // Subtract the centroid of the non-H atoms
+      for (vector<vector3>::size_type i=0; i<mtarget.cols(); ++i)
+        mtarget.col(i) -= _target_centr;
+
+      // Rotate
+      Eigen::MatrixXd result = mtarget.transpose() * _rotMatrix;
+      result.transposeInPlace();
+
+      // Add back the centroid of the reference and convert to vv3
+      Eigen::Vector3d tmp;
+      aligned_coords.reserve(_result.cols());
+      for (int i=0; i<result.cols(); ++i) {
+        tmp = result.col(i) + _ref_centr;
+        aligned_coords.push_back(vector3(tmp(0), tmp(1), tmp(2)));
+      }
+    }
 
     return aligned_coords;
   }
