@@ -46,10 +46,9 @@ namespace OpenBabel
     bool Align();
 
     // Accessor methods
-    //void GetRotMatrix(matrix3x3 *rotMatrix);
     double GetRMSD();
     vector<vector3> GetAlignment();
-    const vector<vector3> * GetPRef() {return _pref;};
+    bool UpdateCoords(OBMol* target);
 
   private:
     bool _ready;

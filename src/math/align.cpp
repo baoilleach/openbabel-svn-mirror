@@ -163,16 +163,15 @@ namespace OpenBabel
       // Find the automorphisms of the Reference Molecule
       OBMol workmol = *_prefmol; // OBGraphSym requires non-const OBMol
 
-      OBBitVec* frag_atoms = new OBBitVec(workmol.NumAtoms());
+      OBBitVec frag_atoms(workmol.NumAtoms());
       FOR_ATOMS_OF_MOL(a, workmol)
         if (_includeH || !a->IsHydrogen())
-          frag_atoms->SetBitOn(a->GetIdx());
+          frag_atoms.SetBitOn(a->GetIdx());
       
-      OBGraphSym gs(&workmol, frag_atoms); 
+      OBGraphSym gs(&workmol, &frag_atoms);
       vector<unsigned int> sym_classes;
       gs.GetSymmetry(sym_classes, true);
-      // delete frag_atoms; // Necessary?
-
+  
       // Does any symmetry class occur twice?
       vector<unsigned int> x = sym_classes;
       sort(x.begin(), x.end());
@@ -201,7 +200,7 @@ namespace OpenBabel
           vector<unsigned int> newidx;
           int delta = 1;
           for (int j=1; j<=workmol.NumAtoms(); ++j) {
-            if (!frag_atoms->BitIsSet(j)) {
+            if (!frag_atoms.BitIsSet(j)) {
               delta += 1;
               newidx.push_back(UINT_MAX);
             }
@@ -212,7 +211,7 @@ namespace OpenBabel
           // Rearrange columns of _mtarget for this permutation
           int i=0;
           for (int j=1; j<=workmol.NumAtoms(); ++j) {
-            if (frag_atoms->BitIsSet(j)) {
+            if (frag_atoms.BitIsSet(j)) {
               mtarget.col(i) = _mtarget.col(newidx.at(cit->map.at(j - 1) - 1));
               i++;
             }
@@ -240,7 +239,7 @@ namespace OpenBabel
   vector<vector3> OBAlign::GetAlignment() {
     vector<vector3> aligned_coords;
     if (!_ready) {
-      // Warn!
+      obErrorLog.ThrowError(__FUNCTION__, "Alignment not available until you call Align()" , obError);
       return aligned_coords;
     }
 
@@ -278,6 +277,27 @@ namespace OpenBabel
     }
 
     return aligned_coords;
+  }
+
+  bool OBAlign::UpdateCoords(OBMol* target) {
+    if (!_ready) {
+      obErrorLog.ThrowError(__FUNCTION__, "Alignment not available until you call Align()" , obError);
+      return false;
+    }
+
+    vector<vector3> newcoords = GetAlignment();
+    if (newcoords.size() != target->NumAtoms()) {
+      obErrorLog.ThrowError(__FUNCTION__, "Cannot update the target molecule with the alignment coordinates as they are of different size" , obError);
+      return false;
+    }
+
+    int i = 0;
+    FOR_ATOMS_OF_MOL(a, *target) {
+      a->SetVector(newcoords.at(i));
+      i++;
+    }
+
+    return true;
   }
 
   double OBAlign::GetRMSD() {
