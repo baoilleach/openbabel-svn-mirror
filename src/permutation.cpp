@@ -77,11 +77,25 @@ namespace OpenBabel {
 
   PermutationGroup findAutomorphisms(OpenBabel::OBMol *obmol, const std::vector<unsigned int> &symClasses)
   {
+    // Handle OBGraphSym::NoSymmetryClass by giving each a unique color
+    std::vector<unsigned int> color;
+    color.reserve(symClasses.size());
+    int n = 0;
+    for (std::vector<unsigned int>::const_iterator cit = symClasses.begin(); cit != symClasses.end(); ++cit) {
+      unsigned int symclass = *cit;
+      if (symclass == OBGraphSym::NoSymmetryClass) { 
+        // Assumption: NoSymmetryClass >> symClasses.size()
+        symclass -= n;
+        n++;
+      }
+      color.push_back(symclass);
+    }
+
     // construct the bliss graph
     bliss::Graph g;
     std::map<OpenBabel::OBAtom*, unsigned int> atom2index;
     FOR_ATOMS_OF_MOL (atom, obmol) {
-      atom2index[&*atom] = g.add_vertex(symClasses.at(atom->GetIndex()));
+      atom2index[&*atom] = g.add_vertex(color.at(atom->GetIndex()));
     }
     FOR_BONDS_OF_MOL (bond, obmol) {
       g.add_edge(atom2index[bond->GetBeginAtom()], atom2index[bond->GetEndAtom()]);

@@ -217,18 +217,53 @@ void test_alignWithoutHydrogens() {
   result = align.GetAlignment();
   OB_ASSERT( result.size() == mol.NumAtoms() );
   OB_ASSERT( result.at(0).IsApprox( mol.GetAtom(1)->GetVector(), 1.0E-8 ) );
+
+  // Align molecule to clone, without hydrogens but with sym
+  align = OBAlign(mol, clone, false, true);
+  align.Align();
+  rmsd = align.GetRMSD();
+  OB_ASSERT( fabs(rmsd) < 1.0E-6 );
+  result = align.GetAlignment();
+  OB_ASSERT( result.size() == mol.NumAtoms() );
+  OB_ASSERT( result.at(0).IsApprox( mol.GetAtom(1)->GetVector(), 1.0E-8 ) );
+
 }
 
 void test_alignWithSymWithoutHydrogens() {
   OBConversion conv;
-  bool success = conv.SetInFormat("xyz");
+  bool success = conv.SetInFormat("smi");
   OB_REQUIRE( success );
 
   OBMol mol;
-  success = conv.ReadFile(&mol, TESTDATADIR + string("test3d.xyz"));
+  success = conv.ReadString(&mol, "BrCC(Cl)(Cl)Cl");
   OB_REQUIRE( success );
 
+  OBBuilder builder;
+  OB_REQUIRE( builder.Build(mol) );
+  mol.AddHydrogens();
 
+  // Rotate the CCl3
+  OBMol clone = mol;
+  double ang = mol.GetTorsion(1, 2, 3, 4);
+  clone.SetTorsion( clone.GetAtom(1), clone.GetAtom(2), clone.GetAtom(3), clone.GetAtom(4), (ang + 120) * DEG_TO_RAD );
+
+  // Align molecule to clone with hydrogens and without sym
+  OBAlign align = OBAlign(mol, clone, true, false);
+  align.Align();
+  double rmsd = align.GetRMSD();
+  OB_ASSERT( fabs(rmsd) > 0.5 );
+
+  // Align molecule to clone with hydrogens and with sym
+  align = OBAlign(mol, clone, true, true);
+  align.Align();
+  rmsd = align.GetRMSD();
+  OB_ASSERT( fabs(rmsd) < 0.010 ); // It's actually around 0.0096 but this is as good as it gets it seems
+
+  // Align molecule to clone without hydrogens and with sym
+  align = OBAlign(mol, clone, false, true);
+  align.Align();
+  rmsd = align.GetRMSD();
+  OB_ASSERT( fabs(rmsd) < 0.011 ); // It's actually around 0.0105
 }
 
 int main()
