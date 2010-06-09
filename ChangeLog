@@ -1,3 +1,63 @@
+2010-06-07  Noel O'Boyle
+
+	* scripts/CMakeLists.txt, scripts/openbabel-csharp.i,
+	windows-vc2008/Distribution/*obdotnet*: Enable the CSharp bindings to
+	be compiled (at least on windows so far).
+
+2010-06-07  Noel O'Boyle
+
+	* scripts/CMakeLists.txt, scripts/perl/Makefile.PL: Now perl bindings
+	seem to 'make install' correctly.
+
+2010-06-06  Noel O'Boyle
+
+	* scripts/CMakeLists.txt, scripts/perl/Makefile.PL: Now perl bindings seem to 'make' correctly.
+
+2010-06-06  Noel O'Boyle
+
+	* scripts/CMakeLists.txt, scripts/openbabel-ruby.i, scripts/ruby/extconf.rb: Ruby binding support.
+
+2010-06-06  Noel O'Boyle
+
+	* scripts/CMakeLists.txt: Perl binding support on Linux. Needs more
+	work on the Makefile.PL side.
+
+2010-06-04  Chris Morley
+
+	* src/obconversion.cpp(~OBConversion): corrected memory leak caused by
+	line end buffer as suggested by runz. Fixes half of bug #2992369.
+
+2010-06-03  Noel O'Boyle
+
+	* Set svn:eol-style to native for all text files.
+
+2010-06-02  Noel O'Boyle
+
+	* scripts/CMakeLists.txt: Perl bindings re-enabled. Still can't get to
+	work for MSVC+ActiveState Perl though.
+
+2010-05-26  Noel O'Boyle
+
+	* Lots of files: 'Fix' warnings with 64-bit Windows relating to size_t
+	and unsigned ints. I either:
+	(a) changed unsigned int to size_t where the function was GetSize() or
+	Size() or something
+	or...in every other case...
+	(b) static_cast<unsigned int> the size_t value (for example, no-one
+	expects NumResidues() to be size_t, or GetValence())
+
+2010-05-26  Noel O'Boyle
+
+	* src/formats/CMakeLists.txt: Require -DINCHI_LIBRARY for MSVC builds.
+	This allows the x64 or i386 inchi .lib to be selected depending on the
+	build platform.
+	* windows-vc2008/default_build.bat, x64_default_build.bat:
+	Corresponding changes to the build batch files.
+
+2010-05-26  Chris Morley
+
+	* src/GUI/OBGUI.cpp: minor change to remove compiler warning
+
 2010-05-24  Noel O'Boyle
 
 	* test/testsym.py: Change CML roundtrip test to use temporary file to

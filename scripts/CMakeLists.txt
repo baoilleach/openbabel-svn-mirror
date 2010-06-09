@@ -146,3 +146,179 @@ if (JAVA_BINDINGS)
   endif (EXISTS ${openbabel_SOURCE_DIR}/scripts/java/openbabel-java.cpp OR
       RUN_SWIG)
 endif (JAVA_BINDINGS)
+
+###################
+# Perl
+###################
+
+if (PERL_BINDINGS)
+  if (EXISTS ${openbabel_SOURCE_DIR}/scripts/perl/openbabel-perl.cpp OR
+      RUN_SWIG)
+
+    find_package(PerlLibs)
+    if (NOT PERL_LIBRARY)
+      message(STATUS "Perl library files NOT found. Perl bindings will NOT be compiled.")
+      return()
+    endif (NOT PERL_LIBRARY)
+    include_directories(
+        ${PERL_INCLUDE_PATH}
+    )
+
+    if (RUN_SWIG)
+      add_custom_command(OUTPUT ${openbabel_SOURCE_DIR}/scripts/perl/openbabel-perl.cpp
+          COMMAND ${SWIG_EXECUTABLE} -perl5 -c++ -small -O -templatereduce -naturalvar -I${openbabel_SOURCE_DIR}/include -I${openbabel_BINARY_DIR}/include -o ${openbabel_SOURCE_DIR}/scripts/perl/openbabel-perl.cpp -outdir ${openbabel_SOURCE_DIR}/scripts/perl ${openbabel_SOURCE_DIR}/scripts/openbabel-perl.i
+          MAIN_DEPENDENCY openbabel-perl.i
+      )
+      if (NOT WIN32)
+        add_custom_command(OUTPUT ${openbabel_SOURCE_DIR}/scripts/perl/OpenBabel.pm
+          COMMAND sed -e \"s/^@EXPORT.*/& sub dl_load_flags { 0x01 }/\" <${openbabel_SOURCE_DIR}/scripts/perl/OpenBabel.pm >${openbabel_SOURCE_DIR}/scripts/perl/OpenBabel.new
+          COMMAND ${CMAKE_COMMAND} -E copy ${openbabel_SOURCE_DIR}/scripts/perl/OpenBabel.new ${openbabel_SOURCE_DIR}/scripts/perl/OpenBabel.pm
+          COMMAND ${CMAKE_COMMAND} -E remove ${openbabel_SOURCE_DIR}/scripts/perl/OpenBabel.new
+          MAIN_DEPENDENCY ${openbabel_SOURCE_DIR}/scripts/perl/openbabel-perl.cpp
+        )
+      endif (NOT WIN32)
+    endif (RUN_SWIG)
+
+    set(PERL_PREFIX_TEXT "")
+    if (PERL_PREFIX)
+      set(PERL_PREFIX_TEXT "PREFIX=${PERL_PREFIX}")
+    else (PERL_PREFIX)
+      if (NOT ${CMAKE_INSTALL_PREFIX} EQUAL "/usr/local")
+        set(PERL_PREFIX_TEXT "PREFIX=${CMAKE_INSTALL_PREFIX}")
+      endif (NOT ${CMAKE_INSTALL_PREFIX} EQUAL "/usr/local")
+    endif (PERL_PREFIX)
+
+    if (NOT MSVC)
+      add_custom_target(pre_bindings_perl ALL
+        # Create the scripts/perl directory; we cannot do this inside
+        # bindings_perl as the WORKING_DIRECTORY needs to already exist!
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${openbabel_BINARY_DIR}/scripts/perl
+        )
+      add_custom_target(bindings_perl ALL
+        COMMAND ${CMAKE_COMMAND} -E copy ${openbabel_SOURCE_DIR}/scripts/perl/Makefile.PL ${openbabel_BINARY_DIR}/scripts/perl
+        COMMAND ${CMAKE_COMMAND} -E copy ${openbabel_SOURCE_DIR}/scripts/perl/openbabel-perl.cpp ${openbabel_BINARY_DIR}/scripts/perl
+        COMMAND PERL5LIB=${openbabel_SOURCE_DIR}/scripts/perl/inc SRC_DIR=${openbabel_SOURCE_DIR} ${PERL_EXECUTABLE} ${openbabel_BINARY_DIR}/scripts/perl/Makefile.PL ${PERL_PREFIX_TEXT}
+        COMMAND PERL5LIB=${openbabel_SOURCE_DIR}/scripts/perl/inc make 
+            DEPENDS ${openbabel_SOURCE_DIR}/scripts/perl/openbabel-perl.cpp
+            WORKING_DIRECTORY ${openbabel_BINARY_DIR}/scripts/perl
+        )
+      add_dependencies(bindings_perl pre_bindings_perl)
+      install(CODE "execute_process(COMMAND make install WORKING_DIRECTORY ${openbabel_BINARY_DIR}/scripts/perl)")
+    
+    else (NOT MSVC)
+      add_library(bindings_perl MODULE ${openbabel_SOURCE_DIR}/scripts/perl/openbabel-perl.cpp)
+      target_link_libraries(bindings_perl ${PERL_LIBRARY} ${BABEL_LIBRARY})
+      set_target_properties(bindings_perl PROPERTIES
+          LIBRARY_OUTPUT_DIRECTORY ${openbabel_BINARY_DIR}
+          OUTPUT_NAME openbabel_perl )
+    endif(NOT MSVC)
+
+  else (EXISTS ${openbabel_SOURCE_DIR}/scripts/perl/openbabel-perl.cpp OR
+      RUN_SWIG)
+    message(STATUS "Warning: Perl bindings NOT found. Generate using -DRUN_SWIG.")
+  endif (EXISTS ${openbabel_SOURCE_DIR}/scripts/perl/openbabel-perl.cpp OR
+      RUN_SWIG)
+endif (PERL_BINDINGS)
+
+###################
+# Ruby
+###################
+
+if (RUBY_BINDINGS)
+  if (EXISTS ${openbabel_SOURCE_DIR}/scripts/ruby/openbabel-ruby.cpp OR
+      RUN_SWIG)
+
+    if (RUN_SWIG)
+      add_custom_command(OUTPUT ${openbabel_SOURCE_DIR}/scripts/ruby/openbabel-ruby.cpp
+          COMMAND ${SWIG_EXECUTABLE} -ruby -c++ -small -O -templatereduce -naturalvar -autorename -I${openbabel_SOURCE_DIR}/include -I${openbabel_BINARY_DIR}/include -o ${openbabel_SOURCE_DIR}/scripts/ruby/openbabel-ruby.cpp ${openbabel_SOURCE_DIR}/scripts/openbabel-ruby.i
+          MAIN_DEPENDENCY openbabel-ruby.i
+      )
+    endif (RUN_SWIG)
+
+    find_package(Ruby)
+    if (NOT RUBY_LIBRARY)
+      message(STATUS "Ruby library files NOT found. Ruby bindings will NOT be compiled.")
+      return()
+    endif (NOT RUBY_LIBRARY)
+    include_directories(
+        ${RUBY_INCLUDE_PATH}
+    )
+
+    if(NOT MSVC)
+      add_custom_target(pre_bindings_ruby ALL
+        # Create the scripts/ruby directory; we cannot do this inside
+        # bindings_ruby as the WORKING_DIRECTORY needs to already exist!
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${openbabel_BINARY_DIR}/scripts/ruby
+        )
+      add_custom_target(bindings_ruby ALL
+        COMMAND ${RUBY_EXECUTABLE} ${openbabel_SOURCE_DIR}/scripts/ruby/extconf.rb --with-openbabel-lib=${BABEL_LIBRARY} --with-openbabel-include=${openbabel_BINARY_DIR}/include
+        COMMAND ${CMAKE_COMMAND} -E echo "Compiling Ruby bindings"
+        COMMAND make
+        DEPENDS ${openbabel_SOURCE_DIR}/scripts/ruby/openbabel-ruby.cpp
+        WORKING_DIRECTORY ${openbabel_BINARY_DIR}/scripts/ruby
+        )
+        add_dependencies(bindings_ruby pre_bindings_ruby)
+      if (RUBY_PREFIX)
+        install(CODE "execute_process(COMMAND DESTDIR=${RUBY_PREFIX} make install WORKING_DIRECTORY ${openbabel_BINARY_DIR}/scripts/ruby)")
+      else (RUBY_PREFIX)
+        if (${CMAKE_INSTALL_PREFIX} EQUAL "/usr/local")
+          install(CODE "execute_process(COMMAND make install WORKING_DIRECTORY ${openbabel_BINARY_DIR}/scripts/ruby)")
+        else (${CMAKE_INSTALL_PREFIX} EQUAL "/usr/local")
+          install(CODE "execute_process(COMMAND DESTDIR=${CMAKE_INSTALL_PREFIX} make install WORKING_DIRECTORY ${openbabel_BINARY_DIR}/scripts/ruby)")
+        endif (${CMAKE_INSTALL_PREFIX} EQUAL "/usr/local")
+      endif (RUBY_PREFIX)
+    else(NOT MSVC)
+      add_library(bindings_ruby MODULE ${openbabel_SOURCE_DIR}/scripts/ruby/openbabel-ruby.cpp)
+      target_link_libraries(bindings_ruby ${RUBY_LIBRARY} ${BABEL_LIBRARY})
+      set_target_properties(bindings_ruby PROPERTIES
+          OUTPUT_NAME openbabel_ruby )
+          set_target_properties(bindings_ruby PROPERTIES
+              LIBRARY_OUTPUT_DIRECTORY ${openbabel_BINARY_DIR})
+    endif(NOT MSVC)
+
+  else (EXISTS ${openbabel_SOURCE_DIR}/scripts/ruby/openbabel-ruby.cpp OR
+      RUN_SWIG)
+    message(STATUS "Warning: Ruby bindings NOT found. Generate using -DRUN_SWIG.")
+  endif (EXISTS ${openbabel_SOURCE_DIR}/scripts/ruby/openbabel-ruby.cpp OR
+      RUN_SWIG)
+endif (RUBY_BINDINGS)
+
+###################
+# CSharp
+###################
+
+if (CSHARP_BINDINGS)
+  if (EXISTS ${openbabel_SOURCE_DIR}/scripts/csharp/openbabel-csharp.cpp OR
+      RUN_SWIG)
+
+    if (NOT CSHARP_EXECUTABLE)
+      message(STATUS "CSHARP_EXECUTABLE NOT defined. .NET bindings will NOT be created.")
+      return()
+    endif (NOT CSHARP_EXECUTABLE)
+
+    if (RUN_SWIG)
+      add_custom_command(OUTPUT ${openbabel_SOURCE_DIR}/scripts/csharp/openbabel-csharp.cpp ${openbabel_SOURCE_DIR}/scripts/csharp/OBDotNet.dll
+          COMMAND ${CMAKE_COMMAND} -E remove_directory ${openbabel_BINARY_DIR}/scripts/csharp
+          COMMAND ${CMAKE_COMMAND} -E make_directory ${openbabel_BINARY_DIR}/scripts/csharp
+          COMMAND ${CMAKE_COMMAND} -E copy ${openbabel_SOURCE_DIR}/windows-vc2008/Distribution/OBDotNetAssemblyInfo.cs ${openbabel_BINARY_DIR}/scripts/csharp
+          COMMAND ${SWIG_EXECUTABLE} -csharp -c++ -small -O -templatereduce -namespace OpenBabel -outdir ${openbabel_BINARY_DIR}/scripts/csharp -I${openbabel_SOURCE_DIR}/include -I${openbabel_BINARY_DIR}/include -o ${openbabel_SOURCE_DIR}/scripts/csharp/openbabel-csharp.cpp ${openbabel_SOURCE_DIR}/scripts/openbabel-csharp.i
+          COMMAND ${CMAKE_COMMAND} -E chdir ${openbabel_BINARY_DIR}/scripts/csharp ${CSHARP_EXECUTABLE} /target:library /keyfile:${openbabel_SOURCE_DIR}/windows-vc2008/Distribution/obdotnet.snk /optimize /out:${openbabel_SOURCE_DIR}/scripts/csharp/OBDotNet.dll *.cs
+          MAIN_DEPENDENCY openbabel-csharp.i
+          WORKING_DIRECTORY ${openbabel_BINARY_DIR}/scripts
+      )
+    endif (RUN_SWIG)
+
+    add_library(bindings_csharp MODULE ${openbabel_SOURCE_DIR}/scripts/csharp/openbabel-csharp.cpp)
+    target_link_libraries(bindings_csharp ${BABEL_LIBRARY})
+    set_target_properties(bindings_csharp PROPERTIES
+        OUTPUT_NAME openbabel_csharp )
+        set_target_properties(bindings_csharp PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY ${openbabel_BINARY_DIR})
+
+  else (EXISTS ${openbabel_SOURCE_DIR}/scripts/csharp/openbabel-csharp.cpp OR
+      RUN_SWIG)
+    message(STATUS "Warning: Ruby bindings NOT found. Generate using -DRUN_SWIG.")
+  endif (EXISTS ${openbabel_SOURCE_DIR}/scripts/csharp/openbabel-csharp.cpp OR
+      RUN_SWIG)
+endif (CSHARP_BINDINGS)
+
