@@ -499,10 +499,10 @@ namespace OpenBabel
 
   SourceForge project pages:
   - <a href="http://sourceforge.net/projects/openbabel/">Open Babel project page</a> 
-  - <a href="http://sourceforge.net/tracker/?group_id=40728&atid=428740">Bug reporter</a>
-  - <a href="http://sourceforge.net/tracker/?group_id=40728&atid=428743">Feature requests</a>
-  - <a href="http://sourceforge.net/tracker/?group_id=40728&atid=447448">File format requests</a>
-  - <a href="http://sourceforge.net/tracker/?group_id=40728&atid=428743">Mailing lists and archives</a>
+  - <a href="http://sourceforge.net/tracker/?group_id=40728%26atid=428740">Bug reporter</a>
+  - <a href="http://sourceforge.net/tracker/?group_id=40728%26atid=428743">Feature requests</a>
+  - <a href="http://sourceforge.net/tracker/?group_id=40728%26atid=447448">File format requests</a>
+  - <a href="http://sourceforge.net/tracker/?group_id=40728%26atid=428743">Mailing lists and archives</a>
   
   */
 
