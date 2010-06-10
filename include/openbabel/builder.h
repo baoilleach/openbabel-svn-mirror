@@ -51,7 +51,7 @@ namespace OpenBabel
        *  \param mol Molecule with the connectivity (from smiles for example). The coordinates are also
        *         changed in this mol.
        */    
-      bool Build(OBMol &mol);
+      bool Build(OBMol &mol, bool keeprings = false);
       /*! Atoms a and b are part of two fragments that are not connected in mol.
        *  Connect will translate and rotate the fragment that contains b so that
        *  a and b are seperated by a bond. This bond is also added.
@@ -128,6 +128,9 @@ namespace OpenBabel
       static void AddNbrs(OBBitVec &fragment, OBAtom *atom);
  
     private:
+      //! If true, then ring conformations are taken from the input structure
+      //  (which should be 3D)
+      //bool _keeprings = false;
       //! used to hold the fragments loaded in the constructor
       static std::vector<std::pair<OBSmartsPattern*, std::vector<vector3> > > _fragments;
       //! Connect a ring fragment to an already matched fragment. Currently only
