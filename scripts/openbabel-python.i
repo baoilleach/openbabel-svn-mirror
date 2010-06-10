@@ -11,6 +11,7 @@
 #include <openbabel/rand.h>
 #include <openbabel/math/vector3.h>
 #include <openbabel/math/matrix3x3.h>
+#include <openbabel/align.h>
 #include <openbabel/generic.h>
 #include <openbabel/griddata.h>
 
@@ -159,6 +160,7 @@ CAST_GENERICDATA_TO(VirtualBond)
 %include <openbabel/rand.h>
 %include <openbabel/obutil.h>
 %include <openbabel/math/vector3.h>
+%include <openbabel/align.h>
 %warnfilter(503) OpenBabel::matrix3x3; // Not wrapping any of the overloaded operators
 %include <openbabel/math/matrix3x3.h>
 
