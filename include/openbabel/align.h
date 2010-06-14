@@ -30,7 +30,7 @@ namespace OpenBabel
 {
   class OBAPI OBAlign {
   public: 
-    OBAlign();
+    OBAlign(bool includeH=false, bool symmetry=true);
     OBAlign(const OBMol &refmol, const OBMol &targetmol, bool includeH=false, bool symmetry=true);
     //OBAlign(const OBMol &refmol, const OBMol &targetmol, const vector<double> wts);
     OBAlign(const vector<vector3> &ref, const vector<vector3> &target);

@@ -34,10 +34,10 @@ using namespace std;
 
 namespace OpenBabel
 {
-  OBAlign::OBAlign() {
+  OBAlign::OBAlign(bool includeH, bool symmetry) {
     _ready = false;
-    _symmetry = false;
-    _includeH = false;
+    _symmetry = includeH;
+    _includeH = symmetry;
   }
 
   OBAlign::OBAlign(const vector<vector3> &ref, const vector<vector3> &target)
