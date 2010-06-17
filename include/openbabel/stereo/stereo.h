@@ -695,6 +695,8 @@ namespace OpenBabel {
       std::map<OBBond*, OBStereo::Ref> &from);
   // TODO DOCS (HASSLE NOEL ABOUT THIS!!)
   OBAPI std::set<OBBond*> GetUnspecifiedCisTrans(OBMol& mol);
+  // TODO DOCS (HASSLE NOEL ABOUT THIS!!)
+  OBAPI void StereoHydrogenToImplicit(OBMol& mol, OBStereo::Ref atomId);
   /**
    * Get a vector with all OBCisTransStereo objects for the molecule. This 
    * function is used by StereoFrom0D() with the @p addToMol parameter is set 
