@@ -36,8 +36,8 @@ namespace OpenBabel
 {
   OBAlign::OBAlign(bool includeH, bool symmetry) {
     _ready = false;
-    _symmetry = includeH;
-    _includeH = symmetry;
+    _symmetry = symmetry;
+    _includeH = includeH;
   }
 
   OBAlign::OBAlign(const vector<vector3> &ref, const vector<vector3> &target)
