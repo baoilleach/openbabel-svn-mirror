@@ -43,6 +43,7 @@
 #include <openbabel/kinetics.h>
 #include <openbabel/rotor.h>
 #include <openbabel/rotamer.h>
+#include <openbabel/graphsym.h>
 
 %}
 
@@ -240,6 +241,7 @@ OBMol.BeginResidues = OBMol.EndResidues = OBMol.BeginResidue = OBMol.EndResidue 
 %include <openbabel/rotor.h>
 %ignore OpenBabel::Swab;
 %include <openbabel/rotamer.h>
+%include <openbabel/graphsym.h>
 
 # The following %ignores avoid warning messages due to shadowed classes.
 # This does not imply a loss of functionality as (in this case)
