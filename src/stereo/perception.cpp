@@ -1829,7 +1829,7 @@ namespace OpenBabel {
       }
     return unspec_ctstereo;
   }
-  void StereoHydrogenToImplicit(OBMol& mol, OBStereo::Ref atomId) {
+  void StereoRefToImplicit(OBMol& mol, OBStereo::Ref atomId) {
     // The following is for use in replace_if(...) below
     const std::binder1st<std::equal_to<OBStereo::Ref> > equal_to_atomId = std::bind1st (equal_to<OBStereo::Ref>(), atomId);
 
@@ -1848,14 +1848,14 @@ namespace OpenBabel {
       if (datatype == OBStereo::CisTrans) {
         OBCisTransStereo *ct = dynamic_cast<OBCisTransStereo*>(*data);
         OBCisTransStereo::Config ct_cfg = ct->GetConfig();
-        replace_if(ct_cfg.refs.begin(), ct_cfg.refs.end(), equal_to_atomId, OBStereo::ImplicitRef);
+        replace_if(ct_cfg.refs.begin(), ct_cfg.refs.end(), equal_to_atomId, (OBStereo::Ref) OBStereo::ImplicitRef);
         ct->SetConfig(ct_cfg);
       }
       else if (datatype == OBStereo::Tetrahedral) {
         OBTetrahedralStereo *ts = dynamic_cast<OBTetrahedralStereo*>(*data);
         OBTetrahedralStereo::Config ts_cfg = ts->GetConfig();
         if (ts_cfg.from == atomId) ts_cfg.from = OBStereo::ImplicitRef;
-        replace_if(ts_cfg.refs.begin(), ts_cfg.refs.end(), equal_to_atomId, OBStereo::ImplicitRef);
+        replace_if(ts_cfg.refs.begin(), ts_cfg.refs.end(), equal_to_atomId, (OBStereo::Ref) OBStereo::ImplicitRef);
         ts->SetConfig(ts_cfg);
       }
     }

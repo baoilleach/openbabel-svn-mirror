@@ -49,7 +49,8 @@ namespace OpenBabel
         return "MDL MOL format\n"
                "Reads and writes V2000 and V3000 versions\n"
                "Read Options, e.g. -as\n"
-               " s  determine stereochemistry from atom flags\n\n"
+               " s  determine stereochemistry from atom flags\n"
+               " t  read title only\n\n"
                "Write Options, e.g. -x3\n"
             /* " 2  output V2000 (default) or\n" */
                " 3  output V3000 not V2000 (used for >999 atoms/bonds) \n"
@@ -68,7 +69,7 @@ namespace OpenBabel
         return "chemical/x-mdl-molfile"; 
       }
 
-      virtual unsigned int Flags() { return DEFAULTFORMAT; }
+      virtual unsigned int Flags() { return DEFAULTFORMAT | ZEROATOMSOK; }
       virtual const char* TargetClassDescription() { return OBMol::ClassDescription(); }
 
       virtual int SkipObjects(int n, OBConversion* pConv)
@@ -185,8 +186,21 @@ namespace OpenBabel
       obErrorLog.ThrowError(__FUNCTION__, errorMsg.str() , obWarning);
       return(false);
     }
+    
+    //Do not interpret a single (usually blank) line at end of file as
+    //another molecule giving an unnecessary error message.
+    if ( !ifs.good() || ifs.peek() == EOF ) 
+      return false;
+
     mol.SetTitle(line);
-  
+
+    if(pConv->IsOption("t",OBConversion::INOPTIONS))
+    {
+      //Read title only
+      SkipObjects(0, pConv);
+      return true;
+    }
+
     // line 2: IIPPPPPPPPMMDDYYHHmmddSSssssssssssEEEEEEEEEEEERRRRRR
     //
     //          0...1    I = user's initials
@@ -253,6 +267,12 @@ namespace OpenBabel
 
     natoms = ReadUIntField((line.substr(0, 3)).c_str());
     nbonds = ReadUIntField((line.substr(3, 3)).c_str());
+
+    if(ReadUIntField((line.substr(6, 3)).c_str())>0)
+      obErrorLog.ThrowError(__FUNCTION__,
+        "Either the file contains Atom Lists, which are not currently supported and are ignored\n"
+        "or the atom or bond count is >999, which is not allowed in V2000 MDL files.",
+        obWarning);
 
     mol.BeginModify();
     if(line.find("V3000") != string::npos) {

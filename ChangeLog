@@ -1,3 +1,208 @@
+2010-06-30  Geoffrey Hutchison  <babel@geoffhutchison.net>
+
+	* src/forcefield.cpp: Set fixed atom constraints on rotor rules
+	during rotamer/conformer searching, from Chris Wassman.
+
+	* include/openbabel/base.h, src/base.cpp: Add OBReleaseVersion()
+	global function, as suggested by Tobias Schmidt for code detection
+	of versions and features. (Most useful from scripting interfaces,
+	which won't have BABEL_VERSION as a macro.)
+
+2010-06-29 Chris Morley
+
+	* tools/babel.cpp, tools/obabel.cpp: -H no longer lists all formats
+	  (As suggested by Noel)
+	
+	* include/openbabel/plugin.h: correct small error causing warning
+	
+	* src/format.cpp, src/plugin.cpp: small formatting changes in List
+	output.
+
+2010-06-29  Geoffrey Hutchison  <babel@geoffhutchison.net>
+
+	* src/charges/qeq* src/charges/qtpie* data/qeq.txt: Move QEq and
+	QTPIE parameters to the data file. Parameters are possibly suspect
+	for non-standard elements.  Jiahao Chen will send revised versions later.
+
+	* data/UFF.prm: Remove QEq parameters -- not used by UFF.
+
+2010-06-29 Noel O'Boyle
+
+	* CMakeLists.txt: Avoid warnings with MinGW when compiling the exes
+
+2010-06-29 Noel O'Boyle
+
+	* src/formats/*format.cpp, src/formats/xml/*format.cpp: Edit some
+	Descriptions() to replace Input with Read and Output with Write. Also
+	uppercased any "options" to "Options".
+
+2010-06-29 Noel O'Boyle
+
+	* src/formats/xml/cmlformat.cpp: Partial fix for chiral N problems.
+	See PR#3022295.
+
+2010-0628 Chris Morley
+
+	* include/openbabel/depict/depict.h, src/depict/depict.cpp:
+	Use a bitset for options like drawTerminalC, so that extendable
+	while binary compatible. Add a few more options display options.
+
+	* src/formats/svgformat.cpp: add a few more display options.
+	Augment Description() as a possible prototype for Noel's more
+	formatted documentation.
+
+2010-0628 Chris Morley
+
+	* src/GUI/optswx.cpp: when using Description() strings to construct
+	GUI option checkboxes, ignore lines with 4 or more leading spaces
+	within each option list. Allows better formatted documentation, as
+	proposed by Noel.
+
+	* src/formats/*format.cpp: remove remaining continuation characters
+	in Description()s and replace by concatinated ""..." ""..."
+
+2010-06-24 Chris Morley
+
+	* src/formats/mdlformat.cpp:Prevent unnecessary error message with
+	blank line at end of SDF file.
+
+2010-06-23  Noel O'Boyle
+
+	* src/kekulize.cpp, include/openbabel/mol.h: Fix compilation errors
+	with MSVC (and replace some Tabs with whitespace)
+
+2010-06-23  Tim Vandermeersch
+
+        * src/ring.cpp: LSSR selection seems to work now. It is based on
+        lemma 1 from the Vismara paper. (See source for complete reference)
+
+        * src/obiter.cpp, src/ring.cpp: Ring sets should no longer be
+        acquired using OBMol::GetData(OBGenericDataType::RingData). Ring
+        sets now have the correct "SSSR"/"LSSR" attribute set.
+
+        * src/kekulize.cpp: Use LSSR.
+
+        * test/lssrtest.cpp: Add tests for LSSR composition. All unit tests
+        pass except for smarts (was broken before) and py_kekulize. I'm not
+        sure why the last test fails but the stored results might need updating?
+
+2010-06-22  Tim Vandermeersch
+
+        * include/openbabel/mol.h, src/mol.cpp: Add LSSR, add aromaticity
+        changes from Craig.
+
+        * src/ring.cpp: Add LSSR (FindLSSR, GetLSSR, ...)
+
+        * src/kekulize.cpp: Changes to aromaticity from Craig James. Still
+        uses SSSR.
+
+        * test/CMakeLists.txt, test/lssrtest.cpp: Add unit test for LSSR. 
+        The test reorders the atoms and checks if the same rings are found.
+        Currently used aromatics.smi, attype.00.smi and nci.smi. All 1327
+        test cases pass. (old ring & aromatics test still pass. py_kelule
+        test fails though.)
+
+2010-06-21  Noel O'Boyle
+
+	* src/builder.cpp: Fix bug when correcting tet stereo where there is
+	an Implicit H
+
+2010-06-20  Noel O'Boyle
+
+	* src/formats/pdbformat.cpp: the_res not NULL-terminated. Resulted in
+	junk output after residue name in PDB files.
+
+2010-06-20  Noel O'Boyle
+
+	* src/formats/mol2format.cpp: Removed obsolete code that was causing
+	performance problems on large files (e.g. proteins). Fixes
+	bug #3018188
+
+2010-06-19  Chris Morley
+
+	* src/formats/mdlformat.cpp: Added warning message when reading
+	misformed files with too many atoms or bonds. Bug #2971865
+
+2010-06-18  Noel O'Boyle
+
+	* doc/Doxyfile.in: Update to Doxygen 1.7.0 and turn SEARCHENGINE on.
+	* doc/api-style.css (removed), doc/api-header.html: Old style file
+	removed as out-of-date with respect to
+	Doxygen 1.7.0 (instead, the automatically generated doxygen.css is used)
+
+2010-06-17  Noel O'Boyle
+
+	* src/stereo/perception.cpp: Fix to previous commit for Linux.
+
+2010-06-17  Noel O'Boyle
+
+	* src/mol.cpp(DeleteHydrogen), src/stereo/perception.cpp,
+	include/openbabel/stereo/stereo.h: If a hydrogen is deleted, it is now
+	converted to an ImplicitRef in any stereo objects that reference it.
+
+2010-06-14  Chris Morley
+	
+	* data/atomtyp.txt: add IMPVAL for triply bonded O+ (for carbon
+	monoxide). 
+	
+	* src/formats/xml/cmlformat.cpp(ReadMolecule): leave processing
+	of hydrogenCount attributes until the structure is complete, so
+	that explict H can count towards them. Also now handles 
+	hydrogenCount=0. Fixes bug #3014855 (Daniel Lowe).
+	
+	Change specification URI. Clarify implicit H behaviour in description.
+	
+	* src/obconversion.cpp: temporarily reintroduce the lineend
+	memory leak. It was crashing with CML input, which doesn't
+	even use the line end buffer!
+
+2010-06-14  Noel O'Boyle
+
+	* src/graphsym.cpp: Fix my fix to memory leak (get rid of 'new')
+
+2010-06-14  Noel O'Boyle
+
+	* Add target "make docs" to make the Doyxgen docs: $ROOT/doc/Doxyfile.in
+	is converted to $ROOT/Doxyfile by substituting the $BABEL_VERSION and
+	the PATH to Dot.
+
+2010-06-13  Noel O'Boyle
+
+	* src/formats/pdbformat.cpp: Applying Richard Hall's patch to fix
+	handling of CONECT records where bond order was split over two lines.
+	This can occur, for example, with the sulfur in RS(=O)(=O)R'.
+
+2010-06-13  Noel O'Boyle
+
+	* src/obconversion.cpp: Applying Tim's patch to fix memory leak
+
+2010-06-13  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/math/spacegroup.cpp: make import more flexible.
+
+2010-06-11  Noel O'Boyle
+
+	* windows-vc2008/*default_build.bat: Add quotation marks around %CD%
+	to handle case where path to current directory contains a space.
+
+2010-06-11  Noel O'Boyle
+
+	* src/graphsym.cpp: Fix memory leak (use of 'new' without
+	corresponding 'delete')
+
+2010-06-11  Chris Morley
+
+	* src/descriptor.cpp(ParsePredicate): Before doing a numeric comparison,
+	ensure the the filter string contains a number only. Fixes #3014398
+	
+	* src/formats/mdlformat.cpp: Added an option to read only the title
+	and change the format to produce molecules with zero atoms.
+	Useful for fast selection by title from a sd file(UNIX line endings only):
+	  babel all-sdf.sdf -ocopy out.sdf --filter "title=1str*" -at
+	  
+	* src/GUI/OBGUI.cpp: In open and save file dialogs add gz compressed
+	files to filter	string. So, as well as *.sdf, *.sdf.gz files are shown. 
+
 2010-06-07  Noel O'Boyle
 
 	* scripts/CMakeLists.txt, scripts/openbabel-csharp.i,
@@ -251,7 +456,7 @@
 2010-04-20  Jiahao Chen <jiahao@mit.edu>
 
         * src/charges/qeq.h, src/charges/qeq.cpp:
-	Added implementation of QEq charge model (Rappe and Goddard, 1991) 
+	Added implementation of QEq charge model (Rappe and Goddard, 1991)
 
         * src/charges/qtpie.h, src/charges/qtpie.cpp:
 	Added implementation of QTPIE charge model (Chen and Martinez, 2007;
@@ -259,10 +464,10 @@
 
         * src/atom.cpp: added comments to show how these new charge models can
 	be called from within current OpenBabel code
-		
+
         * CMakeLists.txt: added charge models and compile flags for Eigen2
 	library (variables copied from Avogadro source tree)
-        
+
 	* cmake/modules/FindEigen2.cmake: CMake module to configure Eigen2
 	(copied from Avogadro source tree)
 
