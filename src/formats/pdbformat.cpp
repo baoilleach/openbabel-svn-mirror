@@ -444,7 +444,18 @@ namespace OpenBabel
         k += order;
 	
         // Generate the bond
-        mol.AddBond(firstAtom->GetIdx(), connectedAtom->GetIdx(), order+1);
+        if (firstAtom->GetIdx() < connectedAtom->GetIdx()) { // record the bond 'in one direction' only
+          OBBond *bond = mol.GetBond(firstAtom, connectedAtom);
+          if (!bond)
+            mol.AddBond(firstAtom->GetIdx(), connectedAtom->GetIdx(), order+1);
+          else // An additional CONECT record with the same firstAtom that references
+               // a bond created in the previous CONECT record.
+               // For example, the 1136->1138 double bond in the following:
+               //   CONECT 1136 1128 1137 1137 1138
+               //   CONECT 1136 1138 1139
+            bond->SetBondOrder(bond->GetBondOrder() + order+1);
+        }
+	
       }
     return(true);
   }
@@ -600,6 +611,7 @@ namespace OpenBabel
           {
             het = res->IsHetAtom(atom);
             snprintf(the_res,4,"%s",(char*)res->GetName().c_str());
+            the_res[4] = '\0';
             snprintf(type_name,5,"%s",(char*)res->GetAtomID(atom).c_str());
             the_chain = res->GetChain();
 
@@ -631,6 +643,7 @@ namespace OpenBabel
         else
           {
             strcpy(the_res,"UNK");
+            the_res[3] = '\0';
             snprintf(padded_name,sizeof(padded_name), "%s",type_name);
             strncpy(type_name,padded_name,4);
             type_name[4] = '\0';

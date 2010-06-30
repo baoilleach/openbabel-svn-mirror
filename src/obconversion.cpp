@@ -271,7 +271,7 @@ namespace OpenBabel {
       pOutStream=NULL;
       NeedToFreeOutStream = false;
     }
-    delete pLineEndBuf;
+    //delete pLineEndBuf; TEMPORARY until the reason for a unassigned mySource is found
     pLineEndBuf=NULL;
   }
   //////////////////////////////////////////////////////
@@ -1432,7 +1432,7 @@ namespace OpenBabel {
 
   OBConversion::OPAMapType& OBConversion::OptionParamArray(Option_type typ)
   {
-    static OPAMapType* opa = new OPAMapType[3];
+    static OPAMapType opa[3];
     return opa[typ];
   }
 

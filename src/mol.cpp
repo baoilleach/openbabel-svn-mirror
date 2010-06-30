@@ -925,10 +925,31 @@ namespace OpenBabel
     if (!HasSSSRPerceived())
       FindSSSR();
 
-    if (!HasData(OBGenericDataType::RingData))
-      SetData(new OBRingData);
+    OBRingData *rd = 0;
+    if (!HasData("SSSR")) {
+      rd = new OBRingData();
+      rd->SetAttribute("SSSR");
+      SetData(rd);
+    }
 
-    OBRingData *rd = (OBRingData *) GetData(OBGenericDataType::RingData);
+    rd = (OBRingData *) GetData("SSSR");
+    rd->SetOrigin(perceived);
+    return(rd->GetData());
+  }
+
+  vector<OBRing*> &OBMol::GetLSSR()
+  {
+    if (!HasLSSRPerceived())
+      FindLSSR();
+
+    OBRingData *rd = 0;
+    if (!HasData("LSSR")) {
+      rd = new OBRingData();
+      rd->SetAttribute("LSSR");
+      SetData(rd);
+    }
+
+    rd = (OBRingData *) GetData("LSSR");
     rd->SetOrigin(perceived);
     return(rd->GetData());
   }
@@ -1977,7 +1998,13 @@ namespace OpenBabel
 
       }
 
-    _atomIds[atom->GetId()] = (OBAtom*)NULL;
+    // Deleting hydrogens does not invalidate the stereo objects
+    // - however, any explicit refs to the hydrogen atom must be
+    //   converted to implicit refs
+    OBStereo::Ref id = atom->GetId();
+    StereoRefToImplicit(*this, id);
+
+    _atomIds[id] = (OBAtom*)NULL;
     _vatom.erase(_vatom.begin()+(atom->GetIdx()-1));
     _natoms--;
 
