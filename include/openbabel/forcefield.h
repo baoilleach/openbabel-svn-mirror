@@ -1127,6 +1127,35 @@ namespace OpenBabel
      *  OBFF_LOGLVL_HIGH:   See note above. \n 
      */
     void WeightedRotorSearch(unsigned int conformers, unsigned int geomSteps);
+    /**
+     * @brief A fast rotor search to find low energy conformations
+     *
+     * Iterate over each of the rotors, and set the
+     * torsion angle to that which minimizes the energy (while keeping the rest of the molecule
+     * fixed). In general (for molecules with more than
+     * one rotatable bond), this procedure will not find
+     * the global minimum, but it will at least get rid of any bad
+     * clashes, and it do so quickly.
+     
+     * Torsions closer to the center
+     * of the molecule will be optimized first as these most likely
+     * to generate large clashes.
+     * 
+     * One possible use of this procedure is to prepare a reasonable 3D structure
+     * of a molecule for viewing. Another is to prepare the starting structure
+     * for a more systematic rotor search (in which case you should geometry
+     * optimize the final structure).
+     *
+     * This function provides the option of optimizing the final structure as well as to
+     * optimize intermediate structures.
+     *
+     * @param finalSteps The number of steps to take during the final geometry optimization.
+     *                   Default is 200.
+     * @param intermediateSteps The number of steps to take when optimizing test conformations.
+     *                          Default is 0.
+     */
+    int FastRotorSearch(unsigned int finalSteps = 200, unsigned int intermediateSteps = 0);
+
 
     /////////////////////////////////////////////////////////////////////////
     // Energy Minimization                                                 //
