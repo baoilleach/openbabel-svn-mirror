@@ -24,45 +24,13 @@ GNU General Public License for more details.
 #include <openbabel/rotor.h>
 
 #include <float.h> // For DBL_MAX
+#include <algorithm> // For min
 
 namespace OpenBabel
 {
-  int OBForceField::FastRotorSearch(unsigned int finalSteps, unsigned int intermediateSteps)
+  int OBForceField::FastRotorSearch(bool permute)
   {
     int origLogLevel = _loglvl;
-
-//    // -----------------------------------------------------------START
-//    // We are going to use the GTD to find the most central rotors
-//    std::vector<int> gtd;
-//    _mol.GetGTDVector(gtd);
-//
-//    OBRotorList rl;
-//    OBBitVec fixed = _constraints.GetFixedBitVec();
-//    rl.SetFixAtoms(fixed);
-//    rl.Setup(_mol);
-//
-//    OBRotorIterator ri;
-//    OBRotor *rotor;
-//    OBBond *bond;
-//
-//    std::vector <OBRotor *> rotors;
-//    std::vector <unsigned int> gtds, idxs;
-//    typedef std::pair<unsigned int, int> uint_rot;
-//    std::vector <uint_rot> gtd_rotor;
-//    unsigned int i;
-//    for (rotor = rl.BeginRotor(ri), i = 0; rotor; rotor = rl.NextRotor(ri), ++i) {
-//      bond = rotor->GetBond();
-//      unsigned int totGTD = gtd.at( bond->GetBeginAtomIdx() - 1 ) + 
-//                            gtd.at( bond->GetEndAtomIdx()   - 1 );
-//      gtd_rotor.push_back(uint_rot(totGTD, i));
-//#ifdef _DEBUG
-//      std::cout << "Rotor " << i << " with bond " << bond->GetIdx() << " has GTD of " << totGTD << std::endl;
-//#endif
-//    }
-//    std::sort(gtd_rotor.begin(), gtd_rotor.end());
-//    // Now we have a list of rotors ordered by smallest GTD first
-//    // ----------------------------------------------------------END
-
 
     // Remove all conformers (e.g. from previous conformer generators) except for current conformer
     double *initialCoord = new double [_mol.NumAtoms() * 3]; // initial state
@@ -84,49 +52,126 @@ namespace OpenBabel
     rotamerlist.SetBaseCoordinateSets(_mol);
     rotamerlist.Setup(_mol, rl);
 
-    OBRotor *rotor;
-
     // Start with all of the rotors in their 0 position
     // (perhaps instead I should set them randomly?)
-    std::vector<int> rotorKey(rl.Size() + 1, 0);
+    std::vector<int> init_rotorKey(rl.Size() + 1, 0);
+    std::vector<int> rotorKey(init_rotorKey);
 
-    unsigned int i, j, minj;
-    double currentE, minE;
+    unsigned int j, minj;
+    double currentE, minE, best_minE;
+
+    double *verybestconf = new double [_mol.NumAtoms() * 3]; // store the best conformer to date
+    double *bestconf = new double [_mol.NumAtoms() * 3]; // store the best conformer to date in the current permutation
+    double *minconf = new double [_mol.NumAtoms() * 3];  // store the best conformer for the current rotor
+    memcpy((char*)bestconf,(char*)_mol.GetCoordinates(),sizeof(double)*3*_mol.NumAtoms());
+
+    double energy_offset;
+    // Can take shortcut later, as 4 components of the energy will be constant
+    rotamerlist.SetCurrentCoordinates(_mol, rotorKey);
+    SetupPointers();
+    energy_offset = E_Bond(false) + E_Angle(false) + E_StrBnd(false) + E_OOP(false);
 
     // This function relies on the fact that Rotors are ordered from the most
     // central to the most peripheral (due to CompareRotors in rotor.cpp)
-    for (rotor = rl.BeginRotor(ri), i = 1; rotor; rotor = rl.NextRotor(ri), ++i) {
-      minE = DBL_MAX;  
-      
-      for (j = 0; j < rotor->GetResolution().size(); j++) { // For each rotor position
-        _mol.SetCoordinates(store_initial);
-        rotorKey[i] = j;
-        rotamerlist.SetCurrentCoordinates(_mol, rotorKey);
-        SetupPointers();
+    std::vector<OBRotor *> vrotors;
+    OBRotor *rotor;
+    for (rotor = rl.BeginRotor(ri); rotor; rotor = rl.NextRotor(ri))
+      vrotors.push_back(rotor);
+
+    // The permutations are ordered so that the first 2 permutations cover the
+    // combinations of 2, and the first 6 permutations cover the combinations of 3
+    const char permutations[24*4] = {0,1,2,3, 1,0,2,3, 0,2,1,3, 1,2,0,3, 2,0,1,3, 2,1,0,3,
+                                     0,1,3,2, 0,2,3,1, 0,3,1,2, 0,3,2,1, 1,0,3,2, 1,2,3,0,
+                                     1,3,0,2, 1,3,2,0, 2,0,3,1, 2,1,3,0, 2,3,0,1, 2,3,1,0,
+                                     3,0,1,2, 3,0,2,1, 3,1,0,2, 3,1,2,0, 3,2,0,1, 3,2,1,0};
+    const char factorial[5] = {0, 1, 2, 6, 24};
+
+    char num_rotors_to_permute, num_permutations;
+    if (permute)
+      num_rotors_to_permute = std::min<size_t> (4, vrotors.size());
+    else
+      num_rotors_to_permute = 1; // i.e. just use the original order
+    num_permutations = factorial[num_rotors_to_permute];
+
+    // Initialize reordered_rotors - the order in which to test rotors
+    std::vector<unsigned int> reordered_rotors(vrotors.size());
+    for (int i=0; i<vrotors.size(); ++i)
+      reordered_rotors[i] = i;
+
+    std::set<unsigned int> seen;
+    best_minE = DBL_MAX;  
+    for (int N=0; N<num_permutations; ++N) {
+      for (int i=0; i<num_rotors_to_permute; ++i)
+        reordered_rotors.at(i) = *(permutations + N*4 + i);
+
+      rotorKey = init_rotorKey;
+      _mol.SetCoordinates(store_initial);
+      bool quit = false;
+
+      for (int i=0; i<reordered_rotors.size(); ++i) {
+        unsigned int idx = reordered_rotors[i];
+        rotor = vrotors.at(idx);
         
-        if (intermediateSteps) {
-          _loglvl = OBFF_LOGLVL_NONE;
-          SteepestDescent(intermediateSteps); // energy minimization for conformer
-          _loglvl = origLogLevel;
-        }
-        currentE = Energy(false);
-        if (currentE < minE) {
-          minE = currentE;
-          minj = j;
-        }
-      } // Finished testing all positions of this rotor
-      rotorKey[i] = minj;
-#ifdef _DEBUG
-      std::cout << "Energy now is " << minE << std::endl;
-#endif
-    }
+        minE = DBL_MAX;  
+        
+        for (j = 0; j < rotor->GetResolution().size(); j++) { // For each rotor position
+          // Note: we could do slightly better by skipping the rotor position we already
+          //       tested in the last loop (position 0 at the moment). Note that this
+          //       isn't as simple as just changing the loop starting point to j = 1.
+          _mol.SetCoordinates(bestconf);
+          rotorKey[idx + 1] = j;
+          rotamerlist.SetCurrentCoordinates(_mol, rotorKey);
+          SetupPointers();
+          
+          currentE = E_VDW(false) + E_Torsion(false) + E_Electrostatic(false);
+          
+          if (currentE < minE) {
+            minE = currentE;
+            minj = j;
+            memcpy((char*)minconf,(char*)_mol.GetCoordinates(),sizeof(double)*3*_mol.NumAtoms());
+          }
+        } // Finished testing all positions of this rotor
+        rotorKey[idx + 1] = minj;
 
-    if (finalSteps) {
-      _loglvl = OBFF_LOGLVL_NONE;
-      SteepestDescent(intermediateSteps); // energy minimization for conformer
-      _loglvl = origLogLevel;
-    }
+        if (i==4) { // Check whether this rotorKey has already been chosen
+          // Create a hash of the rotorKeys (given that the max value of any rotorKey is 11 from torlib.txt)
+          unsigned int hash = rotorKey[1] + rotorKey[2]*12 + rotorKey[3]*12*12 + rotorKey[4]*12*12*12;
+          
+          if (seen.find(hash) == seen.end()) // Not seen before
+            seen.insert(hash);
+          else { // Already seen - no point continuing
+            quit = true;
+            break;
+          }
+        }
 
+        memcpy((char*)bestconf,(char*)minconf,sizeof(double)*3*_mol.NumAtoms());
+//#ifdef _DEBUG
+//        std::cout << "Energy now is " << energy_offset + minE << std::endl;
+//#endif
+      } // end of this permutation
+      if (!quit) {
+          if (minE < best_minE) {
+            best_minE = minE;
+            memcpy((char*)verybestconf,(char*)bestconf,sizeof(double)*3*_mol.NumAtoms());
+          }
+      }
+
+//#ifdef _DEBUG
+//      if (!quit) {
+//        std::cout << "Final energy is " << energy_offset + minE << " with rotor keys: ";
+//        for (int k = 1; k < rotorKey.size(); ++k)
+//          std::cout << rotorKey.at(k) << " ";
+//        std::cout << std::endl;
+//      }
+//#endif
+    } // end of final permutation
+
+    _mol.SetCoordinates(verybestconf);
+    SetupPointers();
+//#ifdef _DEBUG
+//    std::cout << "Very final energy is " << Energy() << std::endl;
+//#endif
     return true;
   }
 } // end of namespace OpenBabel

@@ -1146,15 +1146,11 @@ namespace OpenBabel
      * for a more systematic rotor search (in which case you should geometry
      * optimize the final structure).
      *
-     * This function provides the option of optimizing the final structure as well as to
-     * optimize intermediate structures.
-     *
-     * @param finalSteps The number of steps to take during the final geometry optimization.
-     *                   Default is 200.
-     * @param intermediateSteps The number of steps to take when optimizing test conformations.
-     *                          Default is 0.
+     * @param permute Whether or not to permute the order of the 4 most central rotors.
+     *                Default is true. This does a more thorough search, but takes 4! = 24 times
+     *                as long.
      */
-    int FastRotorSearch(unsigned int finalSteps = 200, unsigned int intermediateSteps = 0);
+    int FastRotorSearch(bool permute = true);
 
 
     /////////////////////////////////////////////////////////////////////////

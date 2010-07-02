@@ -1,6 +1,7 @@
 #include "obtest.h"
 #include <openbabel/obconversion.h>
 #include <openbabel/forcefield.h>
+#include <openbabel/builder.h>
 
 using namespace std;
 using namespace OpenBabel;
@@ -18,11 +19,25 @@ void test_simple()
   OB_REQUIRE( conv.SetInFormat("sdf") );
   
   OBMol mol;
-  OB_REQUIRE( conv.ReadFile(&mol, GetFilename("8_min.sdf")) );
+  OB_REQUIRE( conv.ReadFile(&mol, GetFilename("largest_bostrom.sdf")) );
+
+  cout << mol.NumAtoms() << endl;
+
+  //OBBuilder builder;
+  //builder.Build(mol, true);
+
+  mol.AddHydrogens();
 
   OBForceField* pff = OBForceField::FindType("mmff94");
   pff->Setup(mol);
-  pff->FastRotorSearch();
+  
+  pff->FastRotorSearch(true);
+  //pff->SteepestDescent(50);
+  //pff->FastRotorSearch(0, 0);
+  //pff->FastRotorSearch(0, 0);
+
+  
+  cout << mol.NumAtoms() << endl;
 }
 
 int main()
