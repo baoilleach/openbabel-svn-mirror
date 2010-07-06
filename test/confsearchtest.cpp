@@ -19,7 +19,7 @@ void test_simple()
   OB_REQUIRE( conv.SetInFormat("sdf") );
   
   OBMol mol;
-  OB_REQUIRE( conv.ReadFile(&mol, GetFilename("largest_bostrom.sdf")) );
+  OB_REQUIRE( conv.ReadFile(&mol, GetFilename("tmp.sdf")) );
 
   cout << mol.NumAtoms() << endl;
 
@@ -31,7 +31,7 @@ void test_simple()
   OBForceField* pff = OBForceField::FindType("mmff94");
   pff->Setup(mol);
   
-  pff->FastRotorSearch(true);
+  pff->FastRotorSearch(false);
   //pff->SteepestDescent(50);
   //pff->FastRotorSearch(0, 0);
   //pff->FastRotorSearch(0, 0);

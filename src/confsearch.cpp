@@ -30,6 +30,9 @@ namespace OpenBabel
 {
   int OBForceField::FastRotorSearch(bool permute)
   {
+    if (_mol.NumRotors() == 0)
+      return 0;
+  
     int origLogLevel = _loglvl;
 
     // Remove all conformers (e.g. from previous conformer generators) except for current conformer
