@@ -20,6 +20,7 @@ set(tests
     cistrans
     stereoperception
     graphsym
+    confsearch
    )
 
 set(TEST_PATH ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
