@@ -172,6 +172,12 @@ namespace OpenBabel
 
     _mol.SetCoordinates(verybestconf);
     SetupPointers();
+
+    delete [] store_initial;
+    delete [] bestconf;
+    delete [] verybestconf;
+    delete [] minconf;
+
 //#ifdef _DEBUG
 //    std::cout << "Very final energy is " << Energy() << std::endl;
 //#endif

@@ -19,7 +19,7 @@ void test_simple()
   OB_REQUIRE( conv.SetInFormat("sdf") );
   
   OBMol mol;
-  OB_REQUIRE( conv.ReadFile(&mol, GetFilename("tmp.sdf")) );
+  OB_REQUIRE( conv.ReadFile(&mol, GetFilename("largest_bostrom.sdf")) );
 
   cout << mol.NumAtoms() << endl;
 
