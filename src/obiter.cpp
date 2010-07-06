@@ -1001,7 +1001,7 @@ namespace OpenBabel
     if (!_parent->HasSSSRPerceived())
       _parent->FindSSSR();
 
-    _rings = (OBRingData *) _parent->GetData("SSSR");
+    _rings = (OBRingData *) _parent->GetData(OBGenericDataType::RingData);
     if(_rings)
       _ptr = _rings->BeginRing(_i);
   }
@@ -1011,7 +1011,7 @@ namespace OpenBabel
     if (!_parent->HasSSSRPerceived())
       _parent->FindSSSR();
 
-    _rings = (OBRingData *) _parent->GetData("SSSR");
+    _rings = (OBRingData *) _parent->GetData(OBGenericDataType::RingData);
     if (_rings)
       _ptr = _rings->BeginRing(_i);
   }
