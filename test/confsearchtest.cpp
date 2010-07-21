@@ -19,12 +19,12 @@ void test_simple()
   OB_REQUIRE( conv.SetInFormat("sdf") );
   
   OBMol mol;
-  OB_REQUIRE( conv.ReadFile(&mol, GetFilename("largest_bostrom.sdf")) );
+  OB_REQUIRE( conv.ReadFile(&mol, GetFilename("tmp.sdf")) );
 
   cout << mol.NumAtoms() << endl;
 
-  //OBBuilder builder;
-  //builder.Build(mol, true);
+  OBBuilder builder;
+  builder.Build(mol, true);
 
   mol.AddHydrogens();
 
