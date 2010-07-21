@@ -21,6 +21,7 @@ GNU General Public License for more details.
 
 /* ---- OpenBabel include ---- */
 #include <openbabel/obmolecformat.h>
+#include <openbabel/math/vector3.h>
 
 /* ---- C++ includes ---- */
 #include <string>
@@ -60,6 +61,31 @@ GNU General Public License for more details.
 
 /* ---- Convert RAD to DEG ---- */
 #define RAD2DEG(r) (((double) 180.0 * r) / PI)
+
+//! \return the geometric centroid to an array of coordinates in double* format
+// Note: Based on center_coords from obutil.cpp. This function is declared in matrix3x3.h but there is no function
+//       definition there.
+OpenBabel::vector3 my_center_coords(double *c, unsigned int size)
+{
+  if (size == 0)
+    {
+      return(OpenBabel::VZero);
+    }
+	unsigned int i; 
+  double x=0.0, y=0.0, z=0.0;
+  for (i = 0;i < size;++i)
+    {
+      x += c[i*3];
+      y += c[i*3+1];
+      z += c[i*3+2];
+    }
+  x /= (double) size;
+  y /= (double) size;
+  z /= (double) size;
+  OpenBabel::vector3 v(x,y,z);
+  return(v);
+}
+
 
 using namespace std;
 namespace OpenBabel
@@ -137,6 +163,25 @@ namespace OpenBabel
     ofs << "#declare " << model_type << " = true;" << endl;
     string trans_tex_setting = trans_texture ? "true" : "false";
     ofs << "#declare TRANS = " << trans_tex_setting << ";" << endl << endl;
+
+    /* ---- Background, camera and light source ---- */
+    OpenBabel::vector3 centroid = my_center_coords(mol.GetCoordinates(), mol.NumAtoms());
+
+    ofs <<  "// create a regular point light source\n"
+            "light_source {\n"
+            "  <" << centroid.x()  + 2.0 << "," << centroid.y() + 1.0 << "," << centroid.z() - 4.0 << ">\n" 
+            "  color rgb <1,1,1>    // light's color\n"
+            "}\n" << endl;
+
+    ofs << "// set a color of the background (sky)" << endl;
+    ofs << "background { color rgb <0.95 0.95 0.95> }\n" << endl;
+
+    ofs <<  "// perspective (default) camera\n"
+            "camera {\n"
+            "  location  <" << centroid.x() << "," << centroid.y() << "," << centroid.z() - 10.0 << ">\n"
+            "  look_at   <" << centroid.x() << "," << centroid.y() << "," << centroid.z() << ">\n"
+            "  right     x*image_width/image_height\n"
+            "}\n" << endl;
 
     /* ---- Include header statement for babel ---- */
     ofs << "//Include header for povray" << endl;
