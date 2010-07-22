@@ -105,9 +105,13 @@ namespace OpenBabel
       return
       "POV-Ray input format\n"
       "Generate an input file for the open source POV-Ray ray tracer.\n"
-      "Write Options e.g. -xm\n"
-      " m <model-type> ``bas`` (ball-and-stick), ``spf`` (space-fill) or ``cst`` (capped sticks) \n"
-      "    The default option is ball-and-stick.\n"
+      "Write Options e.g. -xt\n"
+      " c Add a black and white checkerboard\n"
+      " f Add a mirror sphere\n"
+      " m <model-type> ``BAS`` (ball-and-stick), ``SPF`` (space-fill) or ``CST`` (capped sticks) \n"
+      "    The default option is ball-and-stick. To choose space-fill, you would use the following command line::\n\n"
+      "      obabel aspirin.mol -O aspirin.pov -xm SPF\n\n"
+      " s Add a sky (with clouds)\n"
       " t Use transparent textures\n"
       ;
     };
@@ -128,7 +132,7 @@ namespace OpenBabel
 
   private:
     string model_type;
-    bool trans_texture;
+    bool sky, sphere, trans_texture, checkerboard;
     void OutputHeader(ostream &ofs, OBMol &mol, string prefix);
 
   };
@@ -167,14 +171,48 @@ namespace OpenBabel
     /* ---- Background, camera and light source ---- */
     OpenBabel::vector3 centroid = my_center_coords(mol.GetCoordinates(), mol.NumAtoms());
 
+    ofs << "#include \"colors.inc\"\n" << endl;
+
     ofs <<  "// create a regular point light source\n"
             "light_source {\n"
-            "  <" << centroid.x()  + 2.0 << "," << centroid.y() + 1.0 << "," << centroid.z() - 4.0 << ">\n" 
+            "  <" << centroid.x()  + 2.0 << "," << centroid.y() + 3.0 << "," << centroid.z() - 8.0 << ">\n" 
             "  color rgb <1,1,1>    // light's color\n"
             "}\n" << endl;
 
-    ofs << "// set a color of the background (sky)" << endl;
-    ofs << "background { color rgb <0.95 0.95 0.95> }\n" << endl;
+    if (sky) {
+      ofs << "// Add some nice sky with clouds\n"
+"sky_sphere {\n"
+"    pigment {\n"
+"      gradient y\n"
+"      color_map {\n"
+"        [0.0 1.0 color SkyBlue  color NavyBlue]\n"
+"      }\n"
+"      scale 2\n"
+"      translate -1\n"
+"    }\n"
+"    pigment {\n"
+"      bozo\n"
+"      turbulence 0.65\n"
+"      octaves 6\n"
+"      omega 0.7\n"
+"      lambda 2\n"
+"      color_map {\n"
+"          [0.0 0.1 color rgb <0.85, 0.85, 0.85>\n"
+"                   color rgb <0.75, 0.75, 0.75>]\n"
+"          [0.1 0.5 color rgb <0.75, 0.75, 0.75>\n"
+"                   color rgbt <1, 1, 1, 1>]\n"
+"          [0.5 1.0 color rgbt <1, 1, 1, 1>\n"
+"                   color rgbt <1, 1, 1, 1>]\n"
+"      }\n"
+"      scale <0.2, 0.5, 0.2>\n"
+"    }\n"
+"    rotate -135*x\n"
+"  }\n" << endl;
+    }
+    else { // Simple background
+      ofs << "// set a color of the background (sky)" << endl;
+      ofs << "background { color rgb <0.95 0.95 0.95> }\n" << endl;
+    }
 
     ofs <<  "// perspective (default) camera\n"
             "camera {\n"
@@ -182,6 +220,29 @@ namespace OpenBabel
             "  look_at   <" << centroid.x() << "," << centroid.y() << "," << centroid.z() << ">\n"
             "  right     x*image_width/image_height\n"
             "}\n" << endl;
+
+    /* ---- Checkerboard and mirror sphere ---- */
+    if (sphere) {
+      ofs << 
+"// a mirror sphere\n"
+"sphere\n"
+"{ <" << centroid.x()  + 8.0 << "," << centroid.y() - 4 << "," << centroid.z() + 8.0 << ">,4\n"
+"  pigment { rgb <0,0,0> } // A perfect mirror with no color\n"
+"  finish { reflection 1 } // It reflects all\n"
+"}\n" << endl;
+    }
+    if (checkerboard) {
+      ofs << 
+"// simple Black on White checkerboard... it's a classic\n"
+"plane {\n"
+" -y, " << -(centroid.y()-8) << "\n"
+" pigment {\n"
+"  checker color Black color White\n"
+"  scale 2\n"
+" }\n"
+"}\n" << endl;
+    }
+
 
     /* ---- Include header statement for babel ---- */
     ofs << "//Include header for povray" << endl;
@@ -391,6 +452,8 @@ namespace OpenBabel
 
   void OutputCSTBonds(ostream &ofs, OBMol &mol, string prefix)
   {
+    string bond_type;
+
     /* ---- Write povray-description of all bonds---- */
     for(unsigned int i = 0; i < mol.NumBonds(); ++i)
       {
@@ -433,8 +496,10 @@ namespace OpenBabel
         ofs << "\t   object {" << endl << "\t    bond_" << bond -> GetBondOrder()  << "\n";
 
         /* ---- Add a pigment - statement for start-atom of bond ---- */
+        bond_type = bond->GetBeginAtom() -> GetType();
+        bond_type.erase(remove_if(bond_type.begin(), bond_type.end(), bind1st(equal_to<char>(), '.')));
         ofs << "\t    pigment{color Color_"
-            << bond -> GetBeginAtom() -> GetType()
+            << bond_type
             << "}" << endl;
 
         /* ---- Scale bond if needed ---- */
@@ -492,8 +557,11 @@ namespace OpenBabel
         ofs << "\t   object {" << endl << "\t    bond_" << bond -> GetBondOrder() << endl;
 
         /* ---- Add a pigment - statement for end-atom of bond i ---- */
+        bond_type = bond->GetEndAtom() -> GetType();
+        bond_type.erase(remove_if(bond_type.begin(), bond_type.end(), bind1st(equal_to<char>(), '.')));
+
         ofs << "\t    pigment{color Color_"
-            << bond -> GetEndAtom() -> GetType()
+            << bond_type
             << "}" << endl;
 
         /* ---- Scale bond if needed ---- */
@@ -700,10 +768,11 @@ namespace OpenBabel
       }
     }
 
-    // Use transparent textures? (Default is false)
-    trans_texture = false;
-    if (pConv->IsOption("t"))
-      trans_texture = true;
+    // Set private class variables for options
+    trans_texture = pConv->IsOption("t") ? true : false;
+    sky = pConv->IsOption("s") ? true : false;
+    checkerboard = pConv->IsOption("c") ? true : false;
+    sphere = pConv->IsOption("f") ? true : false;
 
     //Define some references so we can use the old parameter names
     ostream &ofs = *pConv->GetOutStream();
