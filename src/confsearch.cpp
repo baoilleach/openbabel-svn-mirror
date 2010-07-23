@@ -31,7 +31,7 @@ GNU General Public License for more details.
 namespace OpenBabel
 {
   
-  class DiversePoses {
+  class OBAPI DiversePoses {
   public:
     DiversePoses(double RMSD);
     bool AddPose(const OBMol &mol);
@@ -70,10 +70,11 @@ namespace OpenBabel
       align.SetRefMol(mol);
       Tree_it min_node = NULL;
       Tree_sit sib;
+      double rmsd;
       for (sib = poses.begin(node); sib != poses.end(node); ++sib) { // Iterate over siblings of node
         align.SetTargetMol(*sib);
         align.Align();
-        double rmsd = align.GetRMSD();
+        rmsd = align.GetRMSD();
         if (rmsd < levels.at(level)) {
           if (rmsd < cutoff)
             return false;
@@ -82,14 +83,24 @@ namespace OpenBabel
         }
       } // end of for loop
 
-      if (min_node == NULL) { // No similar molecule found, so append it the siblings
+      if (min_node == NULL) {
+        // No similar molecule found, so append it the siblings
+        // and add it as the first child all the way down through the levels
+
         // At this point, sib will be equal to poses.end(node)
-        poses.insert(sib, cmol);
-
-
-
+        node = poses.insert(sib, cmol);
+        for(int k = level; k < levels.size(); ++k)
+          node = poses.append_child(node);
+        return true;
       }
-      
+
+      // If we reach here, then a similar molecule was found
+      node = min_node;
+      level++;
+      while (rmsd < levels.at(level)) {
+        node = poses.child(node, 0); // Get the first child
+        level++;
+      }
     } // end of while loop
 
     return true;
