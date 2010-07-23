@@ -106,6 +106,8 @@ namespace OpenBabel
         _refmol_coords.push_back(atom->GetVector());
     }
     SetRef(_refmol_coords);
+    if (_symmetry)
+      GetAutomorphisms();
   }
 
   void OBAlign::SetTargetMol(const OBMol &targetmol) {
@@ -147,6 +149,33 @@ namespace OpenBabel
 
   }
 
+  void OBAlign::GetAutomorphisms()
+  {
+    // Find the automorphisms of the Reference Molecule
+    OBMol workmol = *_prefmol; // OBGraphSym requires non-const OBMol
+
+    _frag_atoms.Clear();
+    _frag_atoms.Resize(workmol.NumAtoms());
+    FOR_ATOMS_OF_MOL(a, workmol)
+      if (_includeH || !a->IsHydrogen())
+        _frag_atoms.SetBitOn(a->GetIdx());
+    
+    OBGraphSym gs(&workmol, &_frag_atoms);
+    vector<unsigned int> sym_classes;
+    gs.GetSymmetry(sym_classes, true);
+
+    // Does any symmetry class occur twice?
+    vector<unsigned int> x = sym_classes;
+    sort(x.begin(), x.end());
+    if (adjacent_find( x.begin(), x.end() ) == x.end()) { // No duplicate symmetry classes
+      _symmetry = false;
+      return;
+    }
+
+    // Try all of the symmetry-allowed permutations
+    _pg = OpenBabel::findAutomorphisms(&workmol, sym_classes);
+  }
+
   bool OBAlign::Align()
   {
     vector<vector3>::size_type N = _ptarget->size();
@@ -160,76 +189,56 @@ namespace OpenBabel
       SimpleAlign(_mtarget);
     }
     else {  
-      // Find the automorphisms of the Reference Molecule
-      OBMol workmol = *_prefmol; // OBGraphSym requires non-const OBMol
-
-      OBBitVec frag_atoms(workmol.NumAtoms());
-      FOR_ATOMS_OF_MOL(a, workmol)
-        if (_includeH || !a->IsHydrogen())
-          frag_atoms.SetBitOn(a->GetIdx());
-      
-      OBGraphSym gs(&workmol, &frag_atoms);
-      vector<unsigned int> sym_classes;
-      gs.GetSymmetry(sym_classes, true);
+      // Get the isomorphisms and iterate over them
   
-      // Does any symmetry class occur twice?
-      vector<unsigned int> x = sym_classes;
-      sort(x.begin(), x.end());
-      if (adjacent_find( x.begin(), x.end() ) == x.end()) { // No duplicate symmetry classes
-        SimpleAlign(_mtarget);
-      }
-      else { // Get the isomorphisms and iterate over them
-    
-        // ...for storing the results from the lowest rmsd to date
-        double min_rmsd = DBL_MAX;
-        Eigen::MatrixXd result, rotMatrix;
+      // ...for storing the results from the lowest rmsd to date
+      double min_rmsd = DBL_MAX;
+      Eigen::MatrixXd result, rotMatrix;
 
-        // Try all of the symmetry-allowed permutations
-        PermutationGroup pg = OpenBabel::findAutomorphisms(&workmol, sym_classes);
-        std::vector<Permutation>::const_iterator cit;
-        Eigen::MatrixXd mtarget(_mtarget.rows(), _mtarget.cols());
+      // Try all of the symmetry-allowed permutations
+      std::vector<Permutation>::const_iterator cit;
+      Eigen::MatrixXd mtarget(_mtarget.rows(), _mtarget.cols());
+      
+      for (cit = _pg.permutations.begin(); cit != _pg.permutations.end(); ++cit) {
         
-        for (cit = pg.permutations.begin(); cit != pg.permutations.end(); ++cit) {
-          
-          // Generate a mapping from the permutation map to the index of
-          // correct column in _mtarget. Need to handle the fact that the
-          // permutation group contains non-fragment atoms.
-          // For example, map(213465) will be converted to newidx(102354).
-          // If the atom with Idx=3 is not in the fragment, it should be
-          // converted to newidx(10X243) instead.
-          vector<unsigned int> newidx;
-          int delta = 1;
-          for (int j=1; j<=workmol.NumAtoms(); ++j) {
-            if (!frag_atoms.BitIsSet(j)) {
-              delta += 1;
-              newidx.push_back(UINT_MAX);
-            }
-            else
-              newidx.push_back(j - delta);
+        // Generate a mapping from the permutation map to the index of
+        // correct column in _mtarget. Need to handle the fact that the
+        // permutation group contains non-fragment atoms.
+        // For example, map(213465) will be converted to newidx(102354).
+        // If the atom with Idx=3 is not in the fragment, it should be
+        // converted to newidx(10X243) instead.
+        vector<unsigned int> newidx;
+        int delta = 1;
+        for (int j=1; j<=_prefmol->NumAtoms(); ++j) {
+          if (!_frag_atoms.BitIsSet(j)) {
+            delta += 1;
+            newidx.push_back(UINT_MAX);
           }
-          
-          // Rearrange columns of _mtarget for this permutation
-          int i=0;
-          for (int j=1; j<=workmol.NumAtoms(); ++j) {
-            if (frag_atoms.BitIsSet(j)) {
-              mtarget.col(i) = _mtarget.col(newidx.at(cit->map.at(j - 1) - 1));
-              i++;
-            }
-          }
-
-          SimpleAlign(mtarget);
-          if (_rmsd < min_rmsd) {
-            min_rmsd = _rmsd;
-            result = _result;
-            rotMatrix = _rotMatrix;
+          else
+            newidx.push_back(j - delta);
+        }
+        
+        // Rearrange columns of _mtarget for this permutation
+        int i=0;
+        for (int j=1; j<=_prefmol->NumAtoms(); ++j) {
+          if (_frag_atoms.BitIsSet(j)) {
+            mtarget.col(i) = _mtarget.col(newidx.at(cit->map.at(j - 1) - 1));
+            i++;
           }
         }
 
-        // Restore the best answer from memory
-        _rmsd = min_rmsd;
-        _result = result;
-        _rotMatrix = rotMatrix;
+        SimpleAlign(mtarget);
+        if (_rmsd < min_rmsd) {
+          min_rmsd = _rmsd;
+          result = _result;
+          rotMatrix = _rotMatrix;
+        }
       }
+
+      // Restore the best answer from memory
+      _rmsd = min_rmsd;
+      _result = result;
+      _rotMatrix = rotMatrix;
     }
 
     _ready = true;

@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include <openbabel/mol.h>
 #include <openbabel/math/vector3.h>
 #include <openbabel/math/matrix3x3.h>
+#include <openbabel/permutation.h>
 #include <Eigen/Core>
 
 using namespace std;
@@ -65,9 +66,12 @@ namespace OpenBabel
     vector<vector3> _targetmol_coords;
     Eigen::MatrixXd _result;
     Eigen::MatrixXd _mref, _mtarget;
+    PermutationGroup _pg;
+    OBBitVec _frag_atoms;
     void VectorsToMatrix(const vector<vector3> *pcoords, Eigen::MatrixXd &coords);
     Eigen::Vector3d MoveToOrigin(Eigen::MatrixXd &coords);
     void SimpleAlign(Eigen::MatrixXd &mtarget);
+    void OBAlign::GetAutomorphisms();
   };
 }
 
