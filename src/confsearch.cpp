@@ -22,42 +22,40 @@ GNU General Public License for more details.
 #include <openbabel/forcefield.h>
 #include <openbabel/rotamer.h>
 #include <openbabel/rotor.h>
+#include <openbabel/confsearch.h>
 #include <openbabel/align.h>
 #include <openbabel/tree/tree.hh>
+#include <openbabel/tree/tree_util.hh>
 
 #include <float.h> // For DBL_MAX
 #include <algorithm> // For min
 
 namespace OpenBabel
 {
-  
-  class OBAPI DiversePoses {
-  public:
-    DiversePoses(double RMSD);
-    bool AddPose(const OBMol &mol);
-    typedef tree<OBMol> Tree;
-    typedef tree<OBMol>::iterator Tree_it;
-    typedef tree<OBMol>::sibling_iterator Tree_sit;
-    
-  private:
-    Tree poses;
-    std::vector<double> levels;
-    OBAlign align;
-    double cutoff;
-  };
 
-  DiversePoses::DiversePoses(double RMSD) {
+
+  ostream& operator<<( ostream &out, OBMol &mol_b) {
+    if (mol_b.NumAtoms() == 0)
+      out << "Root";
+    else
+      out << mol_b.GetTorsion(mol_b.GetAtom(1), mol_b.GetAtom(2), mol_b.GetAtom(3), mol_b.GetAtom(4));
+    return out;
+  }
+
+  OBDiversePoses::OBDiversePoses(double RMSD) {
     cutoff = RMSD;
 
     static const double arr[] = {3.0, 2.0, 1.5, 1.0, 0.5, 0.25};
     std::vector<double> vec (arr, arr + sizeof(arr) / sizeof(arr[0]) );
-    vec.erase(std::remove_if(vec.begin(), vec.end(), std::bind1st(std::less<double>(), (cutoff + 0.1) )));
+    vec.erase(std::remove_if(vec.begin(), vec.end(), std::bind2nd(std::less<double>(), (cutoff + 0.1) )), vec.end());
     vec.push_back(cutoff);
 
     levels = vec;
+
+    poses.insert(poses.begin(), OBMol()); // Add a dummy top node
   }
 
-  bool DiversePoses::AddPose(const OBMol &mol) {
+  bool OBDiversePoses::AddPose(const OBMol &mol) {
     OBMol cmol = mol; // Store a copy of the molecule in the tree
 
     Tree_it node = poses.begin();
@@ -65,13 +63,13 @@ namespace OpenBabel
 
     while(true) {
 
-      // Find whether the molecule is similar to any of the siblings of this node.
+      // Find whether the molecule is similar to any of the children of this node.
       // - min_node will hold the result of this search
       align.SetRefMol(mol);
-      Tree_it min_node = NULL;
+      Tree_it min_node = poses.end(); // Point it at the end iterator
       Tree_sit sib;
       double rmsd;
-      for (sib = poses.begin(node); sib != poses.end(node); ++sib) { // Iterate over siblings of node
+      for (sib = poses.begin(node); sib != poses.end(node); ++sib) { // Iterate over children of node
         align.SetTargetMol(*sib);
         align.Align();
         rmsd = align.GetRMSD();
@@ -83,14 +81,14 @@ namespace OpenBabel
         }
       } // end of for loop
 
-      if (min_node == NULL) {
-        // No similar molecule found, so append it the siblings
+      if (min_node == poses.end()) {
+        // No similar molecule found, so append it the children
         // and add it as the first child all the way down through the levels
-
-        // At this point, sib will be equal to poses.end(node)
-        node = poses.insert(sib, cmol);
-        for(int k = level; k < levels.size(); ++k)
-          node = poses.append_child(node);
+        
+        for(int k = level; k < levels.size(); ++k) {
+          node = poses.append_child(node, cmol);
+        }
+        //kptree::print_tree_bracketed(poses);
         return true;
       }
 
@@ -104,7 +102,10 @@ namespace OpenBabel
     } // end of while loop
 
     return true;
+  }
 
+  size_t OBDiversePoses::GetSize() {
+    return poses.size() - 1; // Remove the dummy
   }
 
   int OBForceField::FastRotorSearch(bool permute)

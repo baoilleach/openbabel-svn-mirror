@@ -49,6 +49,8 @@
 
 #include <openbabel/chargemodel.h>
 
+#include <openbabel/confsearch.h>
+
 %}
 
 %include "std_list.i"
@@ -251,6 +253,7 @@ OBMol.BeginResidues = OBMol.EndResidues = OBMol.BeginResidue = OBMol.EndResidue 
 %include <openbabel/spectrophore.h>
 #ifdef HAVE_EIGEN2
 %include <openbabel/conformersearch.h>
+%include <openbabel/confsearch.h>
 #endif
 
 # The following %ignores avoid warning messages due to shadowed classes.
