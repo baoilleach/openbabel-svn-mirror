@@ -140,7 +140,6 @@ namespace OpenBabel
     //@}
 
   public:
-
     //! \name Initialization and data (re)size methods
     //@{
     //! Constructor
@@ -153,6 +152,8 @@ namespace OpenBabel
     OBMol &operator=(const OBMol &mol);      
     //! Copies atoms and bonds but not OBGenericData
     OBMol &operator+=(const OBMol &mol);
+
+    friend std::ostream& operator<< (std::ostream &out, OBMol &mol);
 
     //! Reserve a minimum number of atoms for internal storage
     //! This improves performance since the internal atom vector does not grow.
