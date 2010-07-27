@@ -40,16 +40,20 @@ void test_basic()
   poses.AddPose(mol);
   size_t s = poses.GetSize();
   OB_ASSERT( s == 6 );
+  OB_ASSERT( poses.GetNRMSD() == 0 );
 
   poses.AddPose(mol);
   s = poses.GetSize();
   OB_ASSERT( s == 6 );
+  OB_ASSERT( poses.GetNRMSD() == 1 );
 
   OBMol mol_b = mol;
   mol_b.SetTorsion(mol_b.GetAtom(1), mol_b.GetAtom(2), mol_b.GetAtom(3), mol_b.GetAtom(4), 2.055);
   poses.AddPose(mol_b);
   s = poses.GetSize();
   OB_ASSERT( s == 7 );
+  int t = poses.GetNRMSD();
+  OB_ASSERT( t == 2 );
 
   OBMol mol_c = mol;
   mol_c.SetTorsion(mol_c.GetAtom(1), mol_c.GetAtom(2), mol_c.GetAtom(3), mol_c.GetAtom(4), 0);
