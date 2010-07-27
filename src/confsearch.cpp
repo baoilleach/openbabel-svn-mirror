@@ -26,6 +26,7 @@ GNU General Public License for more details.
 #include <openbabel/align.h>
 #include <openbabel/tree/tree.hh>
 #include <openbabel/tree/tree_util.hh>
+#include <openbabel/math/vector3.h>
 
 #include <float.h> // For DBL_MAX
 #include <algorithm> // For min
@@ -119,6 +120,91 @@ namespace OpenBabel
   size_t OBDiversePoses::GetSize() {
     return poses.size() - 1; // Remove the dummy
   }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  OBDiversePosesB::OBDiversePosesB(const OBMol &ref, double RMSD) {
+    natoms = ref.NumAtoms();
+    align.SetRefMol(ref);
+    n_rmsd = 0;
+    cutoff = RMSD;
+
+    static const double arr[] = {3.0, 2.0, 1.5, 1.0, 0.5, 0.25};
+    std::vector<double> vec (arr, arr + sizeof(arr) / sizeof(arr[0]) );
+    vec.erase(std::remove_if(vec.begin(), vec.end(), std::bind2nd(std::less<double>(), (cutoff + 0.1) )), vec.end());
+    vec.push_back(cutoff);
+
+    levels = vec;
+    vector<vector3> pdummy;
+    poses.insert(poses.begin(), pair<vector<vector3>, double> (pdummy, 0.0)); // Add a dummy top node
+  }
+
+  bool OBDiversePosesB::AddPose(double* coords) {
+    Tree_it node = poses.begin();
+    int level = 0;
+    bool first_time = true;
+
+    // Convert coords to vector<vector3>
+    vector<vector3> vcoords;
+    for (unsigned int a = 0; a < natoms; ++a)
+      vcoords.push_back(vector3(coords[a*3], coords[a*3+1], coords[a*3+2]));
+
+    while(true) {
+
+      // Find whether the molecule is similar to any of the children of this node.
+      // - min_node will hold the result of this search
+      
+      Tree_it min_node = poses.end(); // Point it at the end iterator (will test its value later)
+      double rmsd;
+
+      Tree_sit sib = poses.begin(node);
+      // Skip the first child after the first time through this loop
+      // - it will already have been tested against at the end of the previous loop
+      if (!first_time)
+        ++sib;
+      for (; sib != poses.end(node); ++sib) { // Iterate over children of node
+        align.SetTarget((*sib).first);
+        align.Align();
+        rmsd = align.GetRMSD();
+        n_rmsd++;
+        if (rmsd < levels.at(level)) {
+          if (rmsd < cutoff)
+            return false;
+          min_node = sib;
+          break; // Exit as soon as one is found
+        }
+      } // end of for loop
+
+      if (min_node == poses.end()) {
+        // No similar molecule found, so append it the children
+        // and add it as the first child all the way down through the levels
+        
+        for(int k = level; k < levels.size(); ++k) {
+          node = poses.append_child(node, pair<vector<vector3>, double>(vcoords, 0));
+        }
+        //kptree::print_tree_bracketed(poses);
+        return true;
+      }
+
+      // If we reach here, then a similar molecule was found
+      node = min_node;
+      level++;
+      while (rmsd < levels.at(level)) {
+        node = poses.child(node, 0); // Get the first child
+        level++;
+      }
+
+      first_time = false;
+
+    } // end of while loop
+
+    return true;
+  }
+
+  size_t OBDiversePosesB::GetSize() {
+    return poses.size() - 1; // Remove the dummy
+  }
+
 
   int OBForceField::FastRotorSearch(bool permute)
   {
@@ -275,6 +361,70 @@ namespace OpenBabel
 //#endif
     return true;
   }
+
+template < class V >
+std::ostream& operator<< (std::ostream &out, std::vector<V> &v) {
+  copy(v.begin(), v.end(), ostream_iterator<V>(out, ", ") );
+  return out;
+}
+
+
+ int OBForceField::DiverseConfGen()
+  {
+    if (_mol.NumRotors() == 0)
+      return 0;
+  
+    int origLogLevel = _loglvl;
+
+    // Remove all conformers (e.g. from previous conformer generators) except for current conformer
+    double *initialCoord = new double [_mol.NumAtoms() * 3]; // initial state
+    double *store_initial = new double [_mol.NumAtoms() * 3]; // store the initial state
+    memcpy((char*)initialCoord,(char*)_mol.GetCoordinates(),sizeof(double)*3*_mol.NumAtoms());
+    memcpy((char*)store_initial,(char*)_mol.GetCoordinates(),sizeof(double)*3*_mol.NumAtoms());
+    std::vector<double *> newConfs(1, initialCoord);
+    _mol.SetConformers(newConfs);
+
+    _energies.clear(); // Wipe any energies from previous conformer generators
+
+    OBRotorList rl;
+    OBBitVec fixed = _constraints.GetFixedBitVec();
+    rl.SetFixAtoms(fixed);
+    rl.Setup(_mol);
+
+    OBRotorIterator ri;
+    OBRotamerList rotamerlist;
+    rotamerlist.SetBaseCoordinateSets(_mol);
+    rotamerlist.Setup(_mol, rl);
+
+    double *bestconf = new double [_mol.NumAtoms() * 3]; // store the best conformer to date
+    memcpy((char*)bestconf,(char*)_mol.GetCoordinates(),sizeof(double)*3*_mol.NumAtoms());
+
+    double energy_offset;
+    // Can take shortcut later, as 4 components of the energy will be constant
+    SetupPointers();
+    energy_offset = E_Bond(false) + E_Angle(false) + E_StrBnd(false) + E_OOP(false);
+
+    OBRotorKeys rotorKeys;
+    OBRotor* rotor = rl.BeginRotor(ri);
+    for (int i = 1; i < rl.Size() + 1; ++i, rotor = rl.NextRotor(ri)) // foreach rotor
+      rotorKeys.AddRotor(rotor->GetResolution().size());
+
+    
+    // Main loop over rotamers
+    OBDiversePosesB divposes(_mol, 0.25);
+    do {
+      _mol.SetCoordinates(store_initial);
+      cout << rotorKeys.GetKey() << ": ";
+      rotamerlist.SetCurrentCoordinates(_mol, rotorKeys.GetKey());
+      SetupPointers();
+      double currentE = E_VDW(false) + E_Torsion(false) + E_Electrostatic(false);
+      bool added = divposes.AddPose(_mol.GetCoordinates());
+      cout << currentE << " " << added << endl;
+    } while (rotorKeys.Next());
+
+    return 0;
+ }
+
 } // end of namespace OpenBabel
 
 //! \file confsearch.cpp
