@@ -43,6 +43,7 @@ namespace OpenBabel
   }
 
   OBDiversePoses::OBDiversePoses(double RMSD) {
+    n_rmsd = 0;
     cutoff = RMSD;
 
     static const double arr[] = {3.0, 2.0, 1.5, 1.0, 0.5, 0.25};
@@ -60,19 +61,27 @@ namespace OpenBabel
 
     Tree_it node = poses.begin();
     int level = 0;
+    bool first_time = true;
+    align.SetRefMol(mol);
 
     while(true) {
 
       // Find whether the molecule is similar to any of the children of this node.
       // - min_node will hold the result of this search
-      align.SetRefMol(mol);
-      Tree_it min_node = poses.end(); // Point it at the end iterator
-      Tree_sit sib;
+      
+      Tree_it min_node = poses.end(); // Point it at the end iterator (will test its value later)
       double rmsd;
-      for (sib = poses.begin(node); sib != poses.end(node); ++sib) { // Iterate over children of node
+
+      Tree_sit sib = poses.begin(node);
+      // Skip the first child after the first time through this loop
+      // - it will already have been tested against at the end of the previous loop
+      if (!first_time)
+        ++sib;
+      for (; sib != poses.end(node); ++sib) { // Iterate over children of node
         align.SetTargetMol(*sib);
         align.Align();
         rmsd = align.GetRMSD();
+        n_rmsd++;
         if (rmsd < levels.at(level)) {
           if (rmsd < cutoff)
             return false;
@@ -99,6 +108,9 @@ namespace OpenBabel
         node = poses.child(node, 0); // Get the first child
         level++;
       }
+
+      first_time = false;
+
     } // end of while loop
 
     return true;
