@@ -23,7 +23,7 @@ std::string GetFilename(const std::string &filename)
   return path;
 }
 
-void test_basic()
+void test_divposes()
 {
   OBConversion conv;
   OB_REQUIRE( conv.SetInFormat("smi") );
@@ -62,10 +62,50 @@ void test_basic()
   OB_ASSERT( s == 9 );
 }
 
+void test_divposesb()
+{
+  OBConversion conv;
+  OB_REQUIRE( conv.SetInFormat("smi") );
+
+  OBMol mol;
+  OB_REQUIRE( conv.ReadString(&mol, "ClCCC(=O)Cl") );
+
+  OBBuilder builder;
+  OB_REQUIRE( builder.Build(mol) );
+
+  OBDiversePosesB poses(mol, 0.25);
+  OB_ASSERT( poses.GetSize() == 0 );
+
+  poses.AddPose(mol.GetCoordinates());
+  size_t s = poses.GetSize();
+  OB_ASSERT( s == 6 );
+  OB_ASSERT( poses.GetNRMSD() == 0 );
+
+  poses.AddPose(mol.GetCoordinates());
+  s = poses.GetSize();
+  OB_ASSERT( s == 6 );
+  OB_ASSERT( poses.GetNRMSD() == 1 );
+
+  OBMol mol_b = mol;
+  mol_b.SetTorsion(mol_b.GetAtom(1), mol_b.GetAtom(2), mol_b.GetAtom(3), mol_b.GetAtom(4), 2.055);
+  poses.AddPose(mol_b.GetCoordinates());
+  s = poses.GetSize();
+  OB_ASSERT( s == 7 );
+  int t = poses.GetNRMSD();
+  OB_ASSERT( t == 2 );
+
+  OBMol mol_c = mol;
+  mol_c.SetTorsion(mol_c.GetAtom(1), mol_c.GetAtom(2), mol_c.GetAtom(3), mol_c.GetAtom(4), 0);
+  poses.AddPose(mol_c.GetCoordinates());
+  s = poses.GetSize();
+  OB_ASSERT( s == 9 );
+}
+
 int main()
 {
-//  test_tree();
-  test_basic();
+  test_divposes(); // OBDiversePoses
+
+  test_divposesb(); // OBDiversePosesB
 
   return 0;
 }

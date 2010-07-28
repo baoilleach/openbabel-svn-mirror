@@ -148,6 +148,7 @@ namespace OpenBabel
     vector<vector3> vcoords;
     for (unsigned int a = 0; a < natoms; ++a)
       vcoords.push_back(vector3(coords[a*3], coords[a*3+1], coords[a*3+2]));
+    align.SetRef(vcoords);
 
     while(true) {
 
