@@ -136,10 +136,10 @@ namespace OpenBabel
 
     levels = vec;
     vector<vector3> pdummy;
-    poses.insert(poses.begin(), pair<vector<vector3>, double> (pdummy, 0.0)); // Add a dummy top node
+    poses.insert(poses.begin(), PosePair(pdummy, 0.0)); // Add a dummy top node
   }
 
-  bool OBDiversePosesB::AddPose(double* coords) {
+  bool OBDiversePosesB::AddPose(double* coords, double energy) {
     Tree_it node = poses.begin();
     int level = 0;
     bool first_time = true;
@@ -181,7 +181,7 @@ namespace OpenBabel
         // and add it as the first child all the way down through the levels
         
         for(int k = level; k < levels.size(); ++k) {
-          node = poses.append_child(node, pair<vector<vector3>, double>(vcoords, 0));
+          node = poses.append_child(node, PosePair(vcoords, energy));
         }
         //kptree::print_tree_bracketed(poses);
         return true;
@@ -206,6 +206,66 @@ namespace OpenBabel
     return poses.size() - 1; // Remove the dummy
   }
 
+  bool sortpred(const OBDiversePosesB::PosePair *a, const OBDiversePosesB::PosePair *b) {
+    return (a->second < b->second);
+  }
+
+  vector<double> OBDiversePosesB::UpdateConformers(OBMol &mol) {
+
+    // Initialise a vector of pointers to the nodes of the tree
+    vector <PosePair*> confs;
+    for (Tree_it node = poses.begin(); node != poses.end(); ++node)
+      if (node->first.size() > 0) // Don't include the dummy head node
+        confs.push_back(&*(node));
+
+    // Sort the confs by energy (lowest first)
+    sort(confs.begin(), confs.end(), sortpred);
+
+    // For the moment, store the results in a vector
+    typedef vector<PosePair*> vpp;
+    vpp chosen_confs;
+    
+    // Loop through the confs and chose a diverse bunch
+    for (vpp::iterator conf = confs.begin(); conf!=confs.end(); ++conf) {
+      align.SetRef((*conf)->first);
+
+      bool keepconf = true;
+      for (vpp::iterator chosen = chosen_confs.begin(); chosen!=chosen_confs.end(); ++chosen) {
+        align.SetTarget((*chosen)->first);
+        align.Align();
+        double rmsd = align.GetRMSD();
+        if (rmsd < cutoff) {
+          keepconf = false;
+          break;
+        }
+      }
+
+      if (keepconf)
+        chosen_confs.push_back(*conf);
+      
+    }
+
+    cout << "Tree size " << GetSize() << "Len chosen confs = " << chosen_confs.size();
+
+    // Add confs to the molecule's conformer data and return the energies (these will be added by the calling function)
+    vector<double> energies;
+    for (vpp::iterator chosen = chosen_confs.begin(); chosen!=chosen_confs.end(); ++chosen) {
+      energies.push_back((*chosen)->second);
+      
+      // To avoid making copies of vectors or vector3s, I am using pointers throughout
+      vector<vector3> *tmp = &((*chosen)->first);
+      double *confCoord = new double [natoms * 3];
+      for(unsigned int a = 0; a<natoms; ++a) {
+        vector3* pv3 = &(*tmp)[a];
+        confCoord[a*3] = pv3->x();
+        confCoord[a*3 + 1] = pv3->y();
+        confCoord[a*3 + 2] = pv3->z();
+      }
+      mol.AddConformer(confCoord);
+    }
+
+    return energies;
+  }
 
   int OBForceField::FastRotorSearch(bool permute)
   {
@@ -409,7 +469,6 @@ std::ostream& operator<< (std::ostream &out, std::vector<V> &v) {
     OBRotor* rotor = rl.BeginRotor(ri);
     for (int i = 1; i < rl.Size() + 1; ++i, rotor = rl.NextRotor(ri)) // foreach rotor
       rotorKeys.AddRotor(rotor->GetResolution().size());
-
     
     // Main loop over rotamers
     OBDiversePosesB divposes(_mol, 0.25);
@@ -419,9 +478,17 @@ std::ostream& operator<< (std::ostream &out, std::vector<V> &v) {
       rotamerlist.SetCurrentCoordinates(_mol, rotorKeys.GetKey());
       SetupPointers();
       double currentE = E_VDW(false) + E_Torsion(false) + E_Electrostatic(false);
-      bool added = divposes.AddPose(_mol.GetCoordinates());
+      bool added = divposes.AddPose(_mol.GetCoordinates(), currentE);
       cout << currentE << " " << added << endl;
     } while (rotorKeys.Next());
+
+    // Get results from tree
+    _energies = divposes.UpdateConformers(_mol);
+    // Add back the energy offset
+    transform(_energies.begin(), _energies.end(), _energies.begin(), bind2nd(plus<double>(), energy_offset));
+
+    // Clean up
+    delete [] store_initial;
 
     return 0;
  }
