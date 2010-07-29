@@ -590,10 +590,20 @@ namespace OpenBabel
     used.ToVecInt(children);
   }
 
-  /*!
-  **\brief Calculates the graph theoretical distance of each atom.
-  ** Vector is indexed from zero
-  */
+  /*! \brief Calculates the graph theoretical distance (GTD) of each atom.
+   *
+   * Creates a vector (indexed from zero) containing, for each atom
+   * in the molecule, the number of bonds plus one to the most 
+   * distant non-H atom.
+   *
+   * For example, for the molecule H3CC(=O)Cl the GTD value for C1
+   * would be 3, as the most distant non-H atom (either Cl or O) is
+   * 2 bonds away.
+   * 
+   * Since the GTD measures the distance to non-H atoms, the GTD values
+   * for terminal H atoms tend to be larger than for non-H terminal atoms.
+   * In the example above, the GTD values for the H atoms are all 4.
+   */
   bool OBMol::GetGTDVector(vector<int> &gtd)
   //calculates the graph theoretical distance for every atom
   //and puts it into gtd
@@ -2086,8 +2096,11 @@ namespace OpenBabel
           }
       }
 
-    if (count == 0)
+    if (count == 0) {
+      // Make sure to clear SSSR and aromatic flags we may have tripped above
+      _flags &= (~(OB_SSSR_MOL|OB_AROMATIC_MOL));
       return(true);
+    }
     bool hasCoords = HasNonZeroCoords();
 
     //realloc memory in coordinate arrays for new hydrogens
@@ -2196,7 +2209,7 @@ namespace OpenBabel
     SetConformer(0);
 
     //reset atom type and partial charge flags
-    _flags &= (~(OB_PCHARGE_MOL|OB_ATOMTYPES_MOL));
+    _flags &= (~(OB_PCHARGE_MOL|OB_ATOMTYPES_MOL|OB_SSSR_MOL|OB_AROMATIC_MOL));
 
     return(true);
   }

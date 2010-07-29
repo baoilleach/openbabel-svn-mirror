@@ -20,16 +20,9 @@
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
 
-#if HAVE_RPC_XDR_H
-//#include <limits.h>
-//#include <malloc.h>
-//#include <math.h>
-//#include <rpc/rpc.h>
 #include <rpc/types.h>
 #include <rpc/xdr.h>
 #include <vector>
-//#include <stdio.h>
-//#include <stdlib.h>
 
 #define MAXID 20
 #define MAXABS INT_MAX-2
@@ -624,7 +617,8 @@ namespace OpenBabel
     int minidx, maxidx;
     unsigned sizeint[3], sizesmall[3], bitsizeint[3], size3, *luip;
     int flag, k;
-    int small, smaller, larger, i, is_small, is_smaller, run, prevrun;
+    int small_, smaller, larger, i; 
+    int is_small, is_smaller, run, prevrun;
     float *lfp, lf;
     int tmp, *thiscoord,  prevcoord[3];
     unsigned int tmpcoord[30];
@@ -665,7 +659,7 @@ namespace OpenBabel
           fprintf(stderr,"malloc failed\n");
           return 0;
         }
-        bufsize = size3 * 1.2;
+        bufsize = static_cast<int> (size3 * 1.2);
         buf = (int *)malloc(bufsize * sizeof(*buf));
         if (buf == NULL) {
           fprintf(stderr,"malloc failed\n");
@@ -679,7 +673,7 @@ namespace OpenBabel
           fprintf(stderr,"malloc failed\n");
           return 0;
         }
-        bufsize = size3 * 1.2;
+        bufsize = static_cast<int> (size3 * 1.2);
         buf = (int *)realloc(buf, bufsize * sizeof(*buf));
         if (buf == NULL) {
           fprintf(stderr,"malloc failed\n");
@@ -699,40 +693,40 @@ namespace OpenBabel
       while(lfp < fp + size3 ) {
         /* find nearest integer */
         if (*lfp >= 0.0)
-          lf = *lfp * *precision + 0.5;
+          lf = *lfp * *precision + 0.5f;
         else
-          lf = *lfp * *precision - 0.5;
+          lf = *lfp * *precision - 0.5f;
         if (fabs(lf) > MAXABS) {
           /* scaling would cause overflow */
           errval = 0;
         }
-        lint1 = lf;
+        lint1 = static_cast<int> (lf);
         if (lint1 < minint[0]) minint[0] = lint1;
         if (lint1 > maxint[0]) maxint[0] = lint1;
         *lip++ = lint1;
         lfp++;
         if (*lfp >= 0.0)
-          lf = *lfp * *precision + 0.5;
+          lf = *lfp * *precision + 0.5f;
         else
-          lf = *lfp * *precision - 0.5;
+          lf = *lfp * *precision - 0.5f;
         if (fabs(lf) > MAXABS) {
           /* scaling would cause overflow */
           errval = 0;
         }
-        lint2 = lf;
+        lint2 = static_cast<int> (lf);
         if (lint2 < minint[1]) minint[1] = lint2;
         if (lint2 > maxint[1]) maxint[1] = lint2;
         *lip++ = lint2;
         lfp++;
         if (*lfp >= 0.0)
-          lf = *lfp * *precision + 0.5;
+          lf = *lfp * *precision + 0.5f;
         else
-          lf = *lfp * *precision - 0.5;
+          lf = *lfp * *precision - 0.5f;
         if (fabs(lf) > MAXABS) {
           /* scaling would cause overflow */
           errval = 0;
         }
-        lint3 = lf;
+        lint3 = static_cast<int> (lf);
         if (lint3 < minint[2]) minint[2] = lint3;
         if (lint3 > maxint[2]) maxint[2] = lint3;
         *lip++ = lint3;
@@ -783,7 +777,7 @@ namespace OpenBabel
       maxidx = MIN(LASTIDX, smallidx + 8) ;
       minidx = maxidx - 8; /* often this equal smallidx */
       smaller = magicints[MAX(FIRSTIDX, smallidx-1)] / 2;
-      small = magicints[smallidx] / 2;
+      small_ = magicints[smallidx] / 2;
       sizesmall[0] = sizesmall[1] = sizesmall[2] = magicints[smallidx];
       larger = magicints[maxidx] / 2;
       i = 0;
@@ -801,9 +795,9 @@ namespace OpenBabel
           is_smaller = 0;
         }
         if (i + 1 < *size) {
-          if (abs(thiscoord[0] - thiscoord[3]) < small &&
-              abs(thiscoord[1] - thiscoord[4]) < small &&
-              abs(thiscoord[2] - thiscoord[5]) < small) {
+          if (abs(thiscoord[0] - thiscoord[3]) < small_ &&
+              abs(thiscoord[1] - thiscoord[4]) < small_ &&
+              abs(thiscoord[2] - thiscoord[5]) < small_) {
             /* interchange first with second atom for better
              * compression of water molecules
              */
@@ -844,9 +838,9 @@ namespace OpenBabel
             is_smaller = 0;
           }
 
-          tmpcoord[run++] = thiscoord[0] - prevcoord[0] + small;
-          tmpcoord[run++] = thiscoord[1] - prevcoord[1] + small;
-          tmpcoord[run++] = thiscoord[2] - prevcoord[2] + small;
+          tmpcoord[run++] = thiscoord[0] - prevcoord[0] + small_;
+          tmpcoord[run++] = thiscoord[1] - prevcoord[1] + small_;
+          tmpcoord[run++] = thiscoord[2] - prevcoord[2] + small_;
 		
           prevcoord[0] = thiscoord[0];
           prevcoord[1] = thiscoord[1];
@@ -856,9 +850,9 @@ namespace OpenBabel
           thiscoord = thiscoord + 3;
           is_small = 0;
           if (i < *size &&
-              abs(thiscoord[0] - prevcoord[0]) < small &&
-              abs(thiscoord[1] - prevcoord[1]) < small &&
-              abs(thiscoord[2] - prevcoord[2]) < small) {
+              abs(thiscoord[0] - prevcoord[0]) < small_ &&
+              abs(thiscoord[1] - prevcoord[1]) < small_ &&
+              abs(thiscoord[2] - prevcoord[2]) < small_) {
             is_small = 1;
           }
         }
@@ -875,11 +869,11 @@ namespace OpenBabel
         if (is_smaller != 0) {
           smallidx += is_smaller;
           if (is_smaller < 0) {
-            small = smaller;
+            small_ = smaller;
             smaller = magicints[smallidx-1] / 2;
           } else {
-            smaller = small;
-            small = magicints[smallidx] / 2;
+            smaller = small_;
+            small_ = magicints[smallidx] / 2;
           }
           sizesmall[0] = sizesmall[1] = sizesmall[2] = magicints[smallidx];
         }
@@ -910,7 +904,7 @@ namespace OpenBabel
           fprintf(stderr,"malloc failed\n");
           return 0;
         }
-        bufsize = size3 * 1.2;
+        bufsize = static_cast<int> (size3 * 1.2);
         buf = (int *)malloc(bufsize * sizeof(*buf));
         if (buf == NULL) {
           fprintf(stderr,"malloc failed\n");
@@ -923,7 +917,7 @@ namespace OpenBabel
           fprintf(stderr,"malloc failed\n");
           return 0;
         }
-        bufsize = size3 * 1.2;
+        bufsize = static_cast<int> (size3 * 1.2);
         buf = (int *)realloc(buf, bufsize * sizeof(*buf));
         if (buf == NULL) {
           fprintf(stderr,"malloc failed\n");
@@ -959,7 +953,7 @@ namespace OpenBabel
       maxidx = MIN(LASTIDX, smallidx + 8) ;
       minidx = maxidx - 8; /* often this equal smallidx */
       smaller = magicints[MAX(FIRSTIDX, smallidx-1)] / 2;
-      small = magicints[smallidx] / 2;
+      small_ = magicints[smallidx] / 2;
       sizesmall[0] = sizesmall[1] = sizesmall[2] = magicints[smallidx] ;
       larger = magicints[maxidx];
 
@@ -972,7 +966,7 @@ namespace OpenBabel
       buf[0] = buf[1] = buf[2] = 0;
 	
       lfp = fp;
-      inv_precision = 1.0 / * precision;
+      inv_precision = 1.0f / * precision;
       run = 0;
       i = 0;
       lip = ip;
@@ -1010,9 +1004,9 @@ namespace OpenBabel
           for (k = 0; k < run; k+=3) {
             receiveints(buf, 3, smallidx, sizesmall, thiscoord);
             i++;
-            thiscoord[0] += prevcoord[0] - small;
-            thiscoord[1] += prevcoord[1] - small;
-            thiscoord[2] += prevcoord[2] - small;
+            thiscoord[0] += prevcoord[0] - small_;
+            thiscoord[1] += prevcoord[1] - small_;
+            thiscoord[2] += prevcoord[2] - small_;
             if (k == 0) {
               /* interchange first with second atom for better
                * compression of water molecules
@@ -1042,15 +1036,15 @@ namespace OpenBabel
         }
         smallidx += is_smaller;
         if (is_smaller < 0) {
-          small = smaller;
+          small_ = smaller;
           if (smallidx > FIRSTIDX) {
             smaller = magicints[smallidx - 1] /2;
           } else {
             smaller = 0;
           }
         } else if (is_smaller > 0) {
-          smaller = small;
-          small = magicints[smallidx] / 2;
+          smaller = small_;
+          small_ = magicints[smallidx] / 2;
         }
         sizesmall[0] = sizesmall[1] = sizesmall[2] = magicints[smallidx] ;
       }
@@ -1060,5 +1054,3 @@ namespace OpenBabel
 
 } //namespace OpenBabel
 
-// end HAVE_RPC_XDR_H
-#endif

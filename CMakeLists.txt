@@ -116,6 +116,12 @@ if(wxWidgets_FOUND)
   include_directories(${wxWidgets_INCLUDE_DIRS})
 endif(wxWidgets_FOUND)
 
+if(MSVC)
+  include_directories(${openbabel_SOURCE_DIR}/windows-vc2008/include)
+  # The following line is required for check_include_file(rpc/xdr.h ...) below
+  set(CMAKE_REQUIRED_INCLUDES ${openbabel_SOURCE_DIR}/windows-vc2008/include)
+endif(MSVC)
+
 include(CheckIncludeFile)
 include(CheckIncludeFileCXX)
 include(CheckSymbolExists)
@@ -125,7 +131,9 @@ include(CheckCSourceCompiles)
 check_include_file(conio.h      HAVE_CONIO_H)
 check_include_file(sys/time.h   HAVE_SYS_TIME_H)
 check_include_file(time.h       HAVE_TIME_H)
-check_include_file(strings.h   HAVE_STRINGS_H)
+check_include_file(strings.h    HAVE_STRINGS_H)
+check_include_file(rpc/xdr.h    HAVE_RPC_XDR_H)
+check_include_file(regex.h      HAVE_REGEX_H)
 check_include_file_cxx(sstream  HAVE_SSTREAM)
 
 check_symbol_exists(rint          "math.h"     HAVE_RINT)
@@ -136,6 +144,7 @@ check_symbol_exists(strncasecmp   "string.h"   HAVE_STRNCASECMP)
 
 set(CMAKE_EXTRA_INCLUDE_FILES time.h)
 check_type_size(clock_t CLOCK_T)
+
 
 # Get the GCC version - from KDE4 cmake files
 if(CMAKE_COMPILER_IS_GNUCXX)

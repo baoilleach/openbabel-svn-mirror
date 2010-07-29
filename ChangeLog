@@ -1,3 +1,290 @@
+2010-07-28  Geoffrey Hutchison  <babel@geoffhutchison.net>
+
+	* test/sdfcansmitest.cpp: Added new unit test suggested by TJ
+	O'Donnell to check for canonical SMILES consistency from a
+	SDFile. Currently shows 4 / 48 failures.
+
+2010-07-27  Geoffrey Hutchison  <babel@geoffhutchison.net>
+
+	* tools/CMakeLists.txt: Only link getopt.c if needed. Removes
+	warnings from Clang and GCC about strlen on non-glibc platforms
+	(e.g. Mac).
+
+	* scripts/openbabel-python.i: Add chargemodel to Python bindings.
+
+	* src/mol.cpp (AddHydrogens): Fix crashes exposed by
+	buildertest. Make sure to clear flags even if we don't
+	actually add hydrogens.
+
+	* test/buildertest.cpp: Add asserts to ensure perception flags are cleared.
+
+2010-07-26  Noel O'Boyle
+
+	* CMakeLists.txt, src/formats/CMakeLists.txt: Conditionally compile
+	gamessukformat.cpp only if MSVC or has regex.h. (Fix for MinGW
+	compilation)
+
+2010-07-26  Noel O'Boyle
+
+	* scripts/CMakeLists.txt, openbabel-python.i: Pass -DHAVE_EIGEN2 to swig
+	and conditionally generate bindings for conformersearch.h.
+
+2010-07-22 Chris Morley
+
+	* src/formats/mdlformat.cpp: right align atom numbers in A line, as
+	prompted by Igor Filippov.
+
+	* include/openbabel/tokenst.h: add functor to help withr deleting
+	containers of pointers.
+
+2010-07-21  Noel O'Boyle
+
+	* include/openbabel/math/align.h: Add Doxygen docs. Update the default
+	constructor.
+	* src/math/align.cpp: Update the default constructor.
+
+2010-07-21  Noel O'Boyle
+
+	* src/formats/povrayformat.cpp: POV-ray format has been neglected for
+	a long time. Based on Steven Wathen's comments on openbabel-discuss
+	(28/11/2009), I have gotten it to work. I also added options for
+	checkerboard, a mirror sphere and sky.
+
+2010-07-21  Noel O'Boyle
+
+	* src/CMakeLists.txt: Only compile ops/conformer.cpp and
+	src/conformersearch.cpp if Eigen2 is found
+
+2010-07-19 Chris Morley
+
+	* src/formats/inchiformat.cpp: make suitable for InChI 1.03.
+	Allow InChI options and re-enable -M and -F options for non-
+	standard InChI.
+
+	* include/openbabel/inchiformat.h: improve Description()
+
+	* windows-vc2008/libs/i386/libinchi.dll, libinchi.lib: add
+	* windows-vc2008/libs/i386/libstdinchi.dll, libstdinchi.lib: remove
+	
+	* windows-vc2008/default_build.bat: change from libstdinchi.lib
+	 to libinchi
+
+	* src/GUI/OBGUI.cpp,src/GUI/OBGUI.h: add menu item to shrink
+	window to minimum useful size.
+
+2010-07-19 Chris Morley
+
+	* include/openbabel/plugin.h: reverted the last change. Something
+	seems to have gone wrong with the deobfuscation of the	MAKE_PLUGIN
+	macro and was causing a crash in the GUI when formats were changed.
+	I did not find out the precise cause, but it seemed to be around the
+	default op. The difficulty of debugging	this illustrates that using a
+	macro here is is not nice; we could do with a more C++ way of making
+	a plugin. Tim has suggested a possible approach
+	http://openbabel.org/wiki/Plugins
+	
+	There is already an annotated version of the contents of the macro
+	at the end of the op.h, but it might not be up to date. 
+	
+2010-07-16 Konstantin Tokarev
+	* New INSTALL file
+
+	* include/openbabel/plugin.h: Deobfuscated MAKE_PLUGIN macro
+
+	* src/formats/xml/cmlformat.cpp: Save and load bond labels in 
+	CML format
+
+2010-07-13 Chris Morley
+
+	Alternative method for read-conformers which maintains
+	code segregation (no chemistry in OBConversion)
+	
+	* src/ops/readconformers.cpp: new OBOp to combine multiple conformers
+	into a single molecule.
+	
+	* src/obconversion.cpp,src/transform.cpp:comment out read-conformers
+	code; minor doc mods
+	
+	* src/obmolecformat.cpp: Change option name from "write-conformers"
+	to "writeconformers". The - was causing parsing problems in the GUI.
+	
+	* src/ops/deferred.h,src/ops/sort.cpp: put DeferredFormat in
+	a new file.
+	
+
+2010-07-13 Chris Morley
+
+	* include/openbabel/op.h(OpOptions): ignore ops with
+	"not displayed in GUI" in the first line of their Descriptions()
+	 
+	* src/ops/conformer.cpp,src/ops/forcefield.cpp,tools/obgrep.cpp:
+	Add "not displayed in GUI" to some ops which use multiple extra options
+	that the GUI cannot yet display.
+	
+	* tools/obgrep.cpp: fix so compiles in MSVC
+
+2010-07-12  Geoffrey Hutchison  <babel@geoffhutchison.net>
+
+	* test/buildertest.cpp, src/mol.cpp: Clear flags for SSSR and
+	Aromaticity after adding hydrogens, as detected by the builder
+	test. Don't clear these flags in the test anymore.
+
+	* test/automorphismtest.cpp, test/aligntest.cpp: Find formats
+	correctly on UNIX.
+
+	* include/openbabel/mol.h: Return FindChiralCenters() to use new
+	IsChiral().
+
+	* scripts/CMakeLists.cpp: Require SWIG 2.0.0.
+
+	* src/chiral.cpp: Remove FindChiralCenters().
+
+2010-07-12  Tim Vandermeersch
+
+	* Add OBConformerSearch class
+
+	* Add OBIsomorphismMapper and OBQuery
+
+	* Add --write-conformers option to (o)babel
+
+	* Add OpConformer to do conformer searching with (o)babel
+
+	* Add OpEnergy and OpMinimize
+
+	* Many documentation updates + add examples code (see cmake BUILD_EXAMPLES)
+
+2010-07-10 Chris Morley
+
+	* include/openbabel/math/erf.h: local implementation of erf, because
+	not present in MSVC library.
+
+	* src/charges/qtpie.cpp, src/charges/qeq.cpp: use the above for MSVC
+	builds only, instead of boost.
+
+	* CMakeLists.txt: remove MSVC test for boost, which is not used
+
+	* windows-vc2008/default_build.bat: Remove absolute path for cmake;
+	it has to be in PATH now.
+	Add option for eigen. Eigen directory has to be in a env var.
+
+2010-07-08  Geoffrey Hutchison  <babel@geoffhutchison.net>
+
+	* test/buildertest.cpp: Test for Noel's builder/ring.cpp
+	crash. Currently passes on Mac because of clearing flags. See code
+	comments for details.
+
+2010-07-08  Chris Morley
+
+	* src/ops/sort.cpp(Do): replace stringstream by istringstream.
+	A reference to stringstream is apparently not a reference to istream
+	in g++, although is is in MSVC.
+
+2010-07-07  Chris Morley
+
+	* include/openbabel/descriptor.h, src/descriptor.cpp:
+	Allow descriptors to have a parameter. External code which
+	defines new descriptors will need modifying (an extra parameter
+	on three functions. External code which just uses descriptors
+	is compatible.
+
+	* include/openbabel/groupcontrib.h,src/descriptors/groupcontrib.cpp,
+	src/descriptors/cansmidescriptor.cpp,src/descriptors/inchidescriptor.cpp,
+	src/descriptors/smartsdescriptors.cpp:	make compatible.
+
+ 	* src/ops/sort.cpp: mods so that a parameter will be recognised
+
+	* src/descriptors/filters.cpp: make compatible and add a useless example
+	(commented out) which uses a parameter.
+
+2010-07-07  Noel O'Boyle
+
+	* windows-vc2008/include/*, windows-vc2008/libs/i386/*: Add include
+	files and compiled libraries from bsd-xdr (required for xtcformat.cpp
+	under MSVC). BSD license.
+	* src/formats/CMakeLists.txt: Use the xdr library when compiling with
+	MSVC
+	* windows-vc2008/default_build.bat: Set the location of the xdr
+	library
+	* CMakeLists.txt: Ensure that the cmake configure finds the xdr
+	include files under MSVC
+	* src/formats/xtcformat.cpp: Rename 'small' to 'small_' as small is a
+	typedef for 'char' under MSVC (or something like this)
+
+2010-07-07  Noel O'Boyle
+
+	* CMakeLists.txt, src/formats/xtcformat.cpp,
+	src/formats/CMakeLists.txt: Check for rpc/xdr.h and conditionally
+	compile xtcformat.cpp. (In preparation for MSVC support...)
+
+2010-07-06  Noel O'Boyle
+
+	* src/formats/gamessukformat.cpp, CMakeLists.txt: Enable GAMESS-UK
+	format under MSVC (uses std::tr1::regex instead of regex.h)
+
+2010-07-06  Geoffrey Hutchison  <babel@geoffhutchison.net>
+
+	* include/inchi103, src/formats/inchi103: Import final InChI 1.03
+	release.
+
+2010-07-06  Noel O'Boyle
+
+	* include/openbabel/forcefield.h: Fix memory leak identified by VLD
+
+2010-07-05  Geoffrey Hutchison  <babel@geoffhutchison.net>
+
+	* src/forcefields/forcefielduff.cpp: Revert changes and parse
+	extra parameters for now.
+
+	* doc/Doxyfile: Renamed from Doxyfile.in (not generated by
+	autoconf anymore). Generate ob.tag file for projects generating
+	doxygen documentation with Open Babel symbols (e.g., Avogadro).
+
+	* src/oberror.cpp: Fix from Seth Alves to initialize stream
+	buffers (from Valgrind).
+
+2010-07-05  Konstantin Tokarev <annulen@yandex.ru>
+
+	* THANKS, authors.txt: Added myself to contributors
+
+2010-07-04  Noel O'Boyle
+
+	* src/formats/*format.cpp: Added text from wiki formats [F-Z] to their
+	Descriptions in the .cpp file.
+
+2010-07-03  Chris Morley
+
+	* src/GUI/optswx.cpp: can use "not displayed in GUI" in option
+	list in Description()
+
+	* include/openbabel/depict/painter.h add operator += for OBColor
+
+	* include/openbabel/depict/depict.h,svgpainter.h,
+	  src/depict/depict.cpp, src/depict/svgpainter.cpp: add option
+	  for internalColor on atoms and bonds (by OBPairData)
+
+	* src/formats/svgformat.cpp:add option to display internalColor
+	Remove "Additional Option" in Description
+
+	* src/formats/xml/cmlformat.cpp: read and write color on bonds
+
+	* src/ops/substructdata.cpp:add new op --ss which is like -s but
+	colors the substructure
+
+2010-07-02  Noel O'Boyle
+
+	* include/openbabel/base.h: Add OBAPI declaration to new global
+	function OBReleaseVersion()
+
+2010-07-01  Noel O'Boyle
+
+	* src/formats/*format.cpp: Added text from wiki formats [A-F] to their
+	Descriptions in the .cpp file. I added some markup to CML and
+	Fastsearch.
+
+2010-07-01  Konstantin Tokarev <annulen@yandex.ru>
+
+	* src/confi.h.cmake: Added macros OB_VERSION_CHECK and OB_VERSION
+
 2010-06-30  Geoffrey Hutchison  <babel@geoffhutchison.net>
 
 	* src/forcefield.cpp: Set fixed atom constraints on rotor rules
@@ -12,9 +299,9 @@
 
 	* tools/babel.cpp, tools/obabel.cpp: -H no longer lists all formats
 	  (As suggested by Noel)
-	
+
 	* include/openbabel/plugin.h: correct small error causing warning
-	
+
 	* src/format.cpp, src/plugin.cpp: small formatting changes in List
 	output.
 

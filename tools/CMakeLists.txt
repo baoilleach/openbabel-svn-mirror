@@ -17,16 +17,11 @@ else(MINIMAL_BUILD)
         obrotamer
         obrotate
   )
-
-  # no getopt on windows
-  if(NOT WIN32)
-    set(tools
-        ${tools}
-        obgrep
-    )
-  endif(NOT WIN32)
-
 endif(MINIMAL_BUILD)
+
+INCLUDE(CheckFunctionExists)
+SET(GETOPT getopt)
+CHECK_FUNCTION_EXISTS(${GETOPT} GETOPT_FOUND)
 
 foreach(tool ${tools})
   add_executable(${tool} ${tool}.cpp)
@@ -41,3 +36,40 @@ foreach(tool ${tools})
                   ARCHIVE DESTINATION lib
   )
 endforeach(tool)
+
+if(NOT MINIMAL_BUILD)
+  # obspectrophore -- requires getopt
+if (NOT GETOPT_FOUND)
+  add_executable(obspectrophore obspectrophore.cpp getopt.c)
+else(NOT GETOPT_FOUND)
+  add_executable(obspectrophore obspectrophore.cpp)
+endif(NOT GETOPT_FOUND)
+  target_link_libraries(obspectrophore ${BABEL_LIBRARY})
+  if(MSVC)
+    set_target_properties(obspectrophore PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+  endif(MSVC)
+  install(TARGETS obspectrophore
+                  RUNTIME DESTINATION bin
+                  LIBRARY DESTINATION lib
+                  ARCHIVE DESTINATION lib
+  )
+
+  # obgrep -- requires getopt
+if (NOT GETOPT_FOUND)
+  add_executable(obgrep obgrep.cpp getopt.c)
+else(NOT GETOPT_FOUND)
+  add_executable(obgrep obgrep.cpp)
+endif(NOT GETOPT_FOUND)
+  target_link_libraries(obgrep ${BABEL_LIBRARY})
+  if(MSVC)
+    set_target_properties(obgrep PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+  endif(MSVC)
+  install(TARGETS obgrep
+                  RUNTIME DESTINATION bin
+                  LIBRARY DESTINATION lib
+                  ARCHIVE DESTINATION lib
+  )
+
+endif(NOT MINIMAL_BUILD)

@@ -268,14 +268,28 @@ void test_alignWithSymWithoutHydrogens() {
 
 int main()
 {
+  // Define location of file formats for testing
+  #ifdef FORMATDIR
+    char env[BUFF_SIZE];
+    snprintf(env, BUFF_SIZE, "BABEL_LIBDIR=%s", FORMATDIR);
+    putenv(env);
+  #endif  
 
-  test_simpleAlign();
+    cout << "Simple Align " << endl;
+    test_simpleAlign();
+    cout << "   done." << endl;
 
-  test_RMSD();
-
-  test_alignMol();
-
-  test_alignMolWithSym();
+    cout << "RMSD" << endl;
+    test_RMSD();
+    cout << "   done." << endl;
+    
+    cout << "Align " << endl;
+    test_alignMol();
+    cout << "   done." << endl;
+    
+    cout << "Align With Symmetry " << endl;
+    test_alignMolWithSym();
+    cout << "   done." << endl;
 
   test_alignWithoutHydrogens();
 

@@ -55,39 +55,56 @@ public:
   {
     return 
     "InChI format\n"
-    "IUPAC/NIST molecular identifier\n"
-    "Write options, e.g. -xat\n"
-    //" n do not use 'recommended' InChI options\n"
-    " X <Option string> List of additional InChI options\n"
-    //" F include fixed hydrogen layer\n"
-    //" M include bonds to metal\n"
-    " t add molecule name\n"
+    "IUPAC/NIST molecular identifier\n\n"
+
+    "Write Options, e.g. -xat\n"
+    "    Standard InChI is written unless certain InChI options are used\n"
+    " K output InChIKey only\n"
+    " t add molecule name after InChI\n"
+    " w ignore less important warnings\n"
+    "    These are:\n"
+    "    \'Omitted undefined stereo\'\n"
+    "    \'Charges were rearranged\'\n"
+    "    \'Proton(s) added/removed\'\n"
+    "    \'Metal was disconnected\'\n"
     " a output auxilliary information\n"
-    " K output InChIKey\n"
-    " w don't warn on undef stereo or charge rearrangement\n"
     " l display InChI log\n"
+    "    Uniqueness options. See also --unique and --sort which are more vesatile.\n"
     " u output only unique molecules\n"
     " U output only unique molecules and sort them\n"
     " e compare first molecule to others\n"
-    " T <param> truncate InChI, /nostereo etc.\n\n"
+    "    This can also be done with InChICompare format\n"
+    "      babel first.smi second.mol third.cml -ok\n"
+    " T <param> truncate InChI, /nostereo etc.\n"
+    "    See below for possible truncation parameters.\n"
+    "    These can be combined, e.g. /nochg/noiso\n"
+    " X <Option string> Additional InChI options\n"
+    "    See InChI documentation.\n"
+    "    These options should be space delimited in a single quoted string.\n"
+    "    Structure perception (compatible with stdInChI)\n"                     
+    "     NEWPSOFF  DoNotAddH   SNon\n"
+    "    Stereo interpretation (produces non-standard InChI)\n"
+    "     SRel SRac SUCF ChiralFlagON ChiralFlagOFF\n"
+    "    InChI creation options (produces non-standard InChI)\n"
+    "     SUU SLUUD   FixedH  RecMet  KET  15T\n"
+    "    The following options are for convenience, e.g. -xF\n"
+    "    but produce non-standard InChI.\n"
+    " F include fixed hydrogen layer\n"
+    " M include bonds to metal\n\n"
 
-    "Input options, e.g. -an\n"
+    "Read Options, e.g. -an\n"
     " X <Option string> List of InChI options\n"
     " n molecule name follows InChI on same line\n"
     " a add InChI string to molecule name\n\n"
-    "Currently the output is standard InChI only."
-    "InChI options may be reintroduced later."
-    " The InChI options should be space delimited in a single quoted string.\n"
-    " See InChI documentation for possible options.\n\n"
 
-    " Truncation parameters used with -xT\n"
-    "/formula  formula only\n"
-    "/connect  formula and connectivity only\n"
-    "/nostereo ignore E/Z and sp3 stereochemistry\n"
-    "/sp3      ignore sp3 stereochemistry\n"
-    "/noEZ     ignore E/Z steroeochemistry\n"
-    "/nochg    ignore charge and protonation\n"
-    "/noiso    ignore isotopes\n\n"
+    "Truncation parameters used with -xT:\n\n"
+    "/formula   formula only\n"
+    "/connect   formula and connectivity only\n"
+    "/nostereo  ignore E/Z and sp3 stereochemistry\n"
+    "/sp3       ignore sp3 stereochemistry\n"
+    "/noEZ      ignore E/Z steroeochemistry\n"
+    "/nochg     ignore charge and protonation\n"
+    "/noiso     ignore isotopes\n\n"
 ;
   };
 
@@ -101,8 +118,9 @@ public:
   static char   CompareInchi(const string& Inchi1, const string& Inchi2);
   static string InChIErrorMessage(const char ch);
 
-  ///Removes layers or truncates InChi, according to\param spec
+  ///Removes layers or truncates InChi, according to \param spec
   ///which can contain any number of:/formula /connect /nostereo /nosp3 /noEZ /nochg /noiso
+  /// @param inchi The inchi string
   static bool EditInchi(std::string& inchi, std::string& spec);
 
   ///Compare std::strings with embedded numbers so that 

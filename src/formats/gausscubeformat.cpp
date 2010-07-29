@@ -56,7 +56,10 @@ namespace OpenBabel
     {
         return
         "Gaussian cube format\n"
-        "ReadOnly.\n"
+        "A grid format for volume data used by Gaussian\n"
+        "Open Babel supports reading and writing Gaussian cubes, including multiple\n"
+        "grids in one file.\n\n" 
+
         "Read Options e.g. -as\n"
         "  b no bonds\n"
         "  s no multiple bonds\n\n";
@@ -603,7 +606,7 @@ bool OBGaussianCubeFormat::ReadMolecule( OBBase* pOb, OBConversion* pConv )
     }
 
     vector<OBGenericData*> grids = pmol->GetAllData(OBGenericDataType::GridData);
-    snprintf(buffer, BUFF_SIZE," %5d", grids.size());
+    snprintf(buffer, BUFF_SIZE," %5lu", (unsigned long)grids.size());
     ofs << buffer << flush;
     for (unsigned int l = 1; l <= grids.size(); ++l)
     {

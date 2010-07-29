@@ -48,17 +48,32 @@ set(math_srcs
     math/vector3.cpp
 )
 
+if (EIGEN2_FOUND)
+set(math_srcs
+        ${math_srcs}
+        math/align.cpp
+)
+endif (EIGEN2_FOUND)
+
 set(ops
   ops/addpolarh.cpp
   ops/gen2D.cpp
   ops/fillUC.cpp
+  ops/forcefield.cpp
   ops/gen3d.cpp
   ops/loader.cpp
   ops/optransform.cpp
   ops/partialcharges.cpp
+  ops/readconformers.cpp
   ops/sort.cpp
   ops/xout.cpp
 )
+if (EIGEN2_FOUND)
+set(ops
+        ${ops}
+        ops/conformer.cpp
+)
+endif (EIGEN2_FOUND)
 
 set(stereo_srcs
     stereo/stereo.cpp
@@ -94,6 +109,7 @@ set(openbabel_srcs
     graphsym.cpp
     grid.cpp
     griddata.cpp
+    isomorphism.cpp
     kekulize.cpp
     locale.cpp
     matrix.cpp
@@ -111,16 +127,24 @@ set(openbabel_srcs
     phmodel.cpp
     plugin.cpp
     pointgroup.cpp
+    query.cpp
     rand.cpp
     residue.cpp
     ring.cpp
     rotamer.cpp
     rotor.cpp
+    spectrophore.cpp
     tokenst.cpp
     transform.cpp
     typer.cpp
     obmolecformat.cpp
 )
+if (EIGEN2_FOUND)
+set(openbabel_srcs
+        ${openbabel_srcs}
+        conformersearch.cpp
+)
+endif (EIGEN2_FOUND)
 
 set(bliss_srcs
     bliss/graph.cc
