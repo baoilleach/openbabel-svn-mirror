@@ -76,19 +76,19 @@ void test_divposesb()
   OBDiversePosesB poses(mol, 0.25);
   OB_ASSERT( poses.GetSize() == 0 );
 
-  poses.AddPose(mol.GetCoordinates());
+  poses.AddPose(mol.GetCoordinates(), 0);
   size_t s = poses.GetSize();
   OB_ASSERT( s == 6 );
   OB_ASSERT( poses.GetNRMSD() == 0 );
 
-  poses.AddPose(mol.GetCoordinates());
+  poses.AddPose(mol.GetCoordinates(), 0);
   s = poses.GetSize();
   OB_ASSERT( s == 6 );
   OB_ASSERT( poses.GetNRMSD() == 1 );
 
   OBMol mol_b = mol;
   mol_b.SetTorsion(mol_b.GetAtom(1), mol_b.GetAtom(2), mol_b.GetAtom(3), mol_b.GetAtom(4), 2.055);
-  poses.AddPose(mol_b.GetCoordinates());
+  poses.AddPose(mol_b.GetCoordinates(), 0);
   s = poses.GetSize();
   OB_ASSERT( s == 7 );
   int t = poses.GetNRMSD();
@@ -96,7 +96,7 @@ void test_divposesb()
 
   OBMol mol_c = mol;
   mol_c.SetTorsion(mol_c.GetAtom(1), mol_c.GetAtom(2), mol_c.GetAtom(3), mol_c.GetAtom(4), 0);
-  poses.AddPose(mol_c.GetCoordinates());
+  poses.AddPose(mol_c.GetCoordinates(), 0);
   s = poses.GetSize();
   OB_ASSERT( s == 9 );
 }
