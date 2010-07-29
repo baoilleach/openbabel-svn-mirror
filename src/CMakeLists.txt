@@ -51,7 +51,7 @@ set(math_srcs
 if (EIGEN2_FOUND)
 set(math_srcs
         ${math_srcs}
-        math/align.cpp
+        align.cpp
 )
 endif (EIGEN2_FOUND)
 
@@ -88,7 +88,6 @@ set(stereo_srcs
 
 set(openbabel_srcs
     alias.cpp
-    align.cpp
     atom.cpp
     base.cpp
     bitvec.cpp
