@@ -68,6 +68,7 @@ namespace OpenBabel {
    * functions.
    *
    * @sa OBStereoBase OBStereoFacade
+   * @since version 2.3
    */
   struct OBAPI OBStereo 
   {
@@ -99,7 +100,7 @@ namespace OpenBabel {
      * Shapes used by OBTetraPlanarStereo subclasses for 
      * setting/getting reference ids.
      *
-     * @image html shape.png
+     * @image html SPshapes.png
      * @sa OBTetraPlanarStereo
      */
     enum Shape {
@@ -284,6 +285,7 @@ namespace OpenBabel {
    * flag. By default, this is always set to true.
    *
    * @sa OBStereo OBStereoFacade
+   * @since version 2.3
    */
   class OBAPI OBStereoBase : public OBGenericData
   {
@@ -345,6 +347,7 @@ namespace OpenBabel {
    * OBStereoBase::GetType.
    *
    * @sa OBStereo OBStereoBase
+   * @since version 2.3
    */
   class OBAPI OBStereoFacade
   {
@@ -449,6 +452,7 @@ namespace OpenBabel {
    * (i.e. OBMol::GetDimension()).
    *
    * @sa StereoFrom3D StereoFrom2D StereoFrom0D
+   * @since version 2.3
    */
   OBAPI void PerceiveStereo(OBMol *mol, bool force = false); 
   /**
@@ -476,9 +480,11 @@ namespace OpenBabel {
      @endverbatim
    *
    * @param mol The molecule containing 2D coordinates.
+   * @param updown A map of OBStereo::BondDirection for cis/trans bonds
    * @param force Force to run the perception even if the results are cached.
    *
    * @sa StereoFrom3D StereoFrom0D PerceiveStereo
+   * @since version 2.3
    */
   OBAPI void StereoFrom2D(OBMol *mol, 
     std::map<OBBond*, enum OBStereo::BondDirection> *updown = NULL, bool force = false);
@@ -496,6 +502,7 @@ namespace OpenBabel {
    * @param force Force to run the perception even if the results are cached.
    *
    * @sa StereoFrom3D StereoFrom0D PerceiveStereo
+   * @since version 2.3
    */
   OBAPI void StereoFrom3D(OBMol *mol, bool force = false);
   /**
@@ -509,9 +516,9 @@ namespace OpenBabel {
    * second tetrahedral atom and add an OBTetrahedralStereo object to the molecule.
    *
    * @param mol The molecule.
-   * @param updown A map of OBStereo::BondDirection for cis/trans bonds
    *
    * @sa StereoFrom3D StereoFrom2D PerceiveStereo
+   * @since version 2.3
    */
   OBAPI void StereoFrom0D(OBMol *mol);
   ///@}
@@ -549,11 +556,12 @@ namespace OpenBabel {
    * false and the returned objects will need to be deleted explicitly.
    *
    * @param mol The molecule.
-   * @param symClasses The symmetry classes to use.
+   * @param stereoUnits The stereogenic units.
    * @param addToMol If true, the OBTetrahedralStereo objects will be added 
    * to the molecule using OBBase::SetData().
    *
    * @sa StereoFrom3D FindTetrahedralAtoms
+   * @since version 2.3
    */
   OBAPI std::vector<OBTetrahedralStereo*> TetrahedralFrom3D(OBMol *mol, 
       const std::vector<StereogenicUnit> &stereoUnits, bool addToMol = true);
@@ -594,11 +602,12 @@ namespace OpenBabel {
      @endverbatim
    *
    * @param mol The molecule.
-   * @param symClasses The symmetry classes to use.
+   * @param stereoUnits The stereogenic units.
    * @param addToMol If true, the OBTetrahedralStereo objects will be added 
    * to the molecule using OBBase::SetData().
    *
    * @sa StereoFrom2D FindTetrahedralAtoms
+   * @since version 2.3
    */
   OBAPI std::vector<OBTetrahedralStereo*> TetrahedralFrom2D(OBMol *mol, 
       const std::vector<StereogenicUnit> &stereoUnits, bool addToMol = true);
@@ -614,11 +623,12 @@ namespace OpenBabel {
    * false and the returned objects will need to be deleted explicitly.
    *
    * @param mol The molecule.
-   * @param symClasses The symmetry classes to use.
+   * @param stereoUnits The stereogenic units.
    * @param addToMol If true, the OBTetrahedralStereo objects will be added 
    * to the molecule using OBBase::SetData().
    *
    * @sa StereoFrom0D FindTetrahedralAtoms
+   * @since version 2.3
    */
   OBAPI std::vector<OBTetrahedralStereo*> TetrahedralFrom0D(OBMol *mol, 
       const std::vector<StereogenicUnit> &stereoUnits, bool addToMol = true);
@@ -650,11 +660,12 @@ namespace OpenBabel {
    * false and the returned objects will need to be deleted explicitly.
    *
    * @param mol The molecule.
-   * @param symClasses The symmetry classes to use.
+   * @param stereoUnits The stereogenic units.
    * @param addToMol If true, the OBCisTransStereo objects will be added 
    * to the molecule using OBBase::SetData().
    *
    * @sa StereoFrom3D FindCisTransBonds
+   * @since version 2.3
    */
   OBAPI std::vector<OBCisTransStereo*> CisTransFrom3D(OBMol *mol, 
       const std::vector<StereogenicUnit> &stereoUnits, bool addToMol = true);
@@ -680,11 +691,13 @@ namespace OpenBabel {
    @endverbatim
    *
    * @param mol The molecule.
-   * @param symClasses The symmetry classes to use.
+   * @param stereoUnits The stereogenic units.
+   * @param updown A map of OBStereo::BondDirection for cis/trans bonds
    * @param addToMol If true, the OBCisTransStereo objects will be added 
    * to the molecule using OBBase::SetData().
    *
    * @sa StereoFrom2D FindCisTransBonds
+   * @since version 2.3
    */
   OBAPI std::vector<OBCisTransStereo*> CisTransFrom2D(OBMol *mol, 
       const std::vector<StereogenicUnit> &stereoUnits, 
@@ -704,6 +717,7 @@ namespace OpenBabel {
    *
    * @param mol The molecule
    * @param atomId The Id of the atom to be converted to an OBStereo::ImplicitRef
+   * @since version 2.3
    */
   OBAPI void StereoRefToImplicit(OBMol& mol, OBStereo::Ref atomId);
   /**
@@ -718,11 +732,12 @@ namespace OpenBabel {
    * false and the returned objects will need to be deleted explicitly.
    *
    * @param mol The molecule.
-   * @param symClasses The symmetry classes to use.
+   * @param stereoUnits The stereogenic units.
    * @param addToMol If true, the OBCisTransStereo objects will be added 
    * to the molecule using OBBase::SetData().
    *
    * @sa StereoFrom0D FindCisTransBonds
+   * @since version 2.3
    */
   OBAPI std::vector<OBCisTransStereo*> CisTransFrom0D(OBMol *mol, 
       const std::vector<StereogenicUnit> &stereoUnits,
@@ -882,6 +897,7 @@ namespace OpenBabel {
    *
    *
    *
+   * @since version 2.3
    */
   
   ///@}  addtogroup

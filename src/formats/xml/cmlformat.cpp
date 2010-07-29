@@ -70,22 +70,68 @@ namespace OpenBabel
       return
         "Chemical Markup Language\n"
         "An XML format.\n"
+
+        "This format writes and reads CML XML files. To write CML1 format rather than\n"
+        "the default CML2, use the -x1 option. To write the array form use -xa and to\n"
+        "specify all hydrogens using the hydrogenCount attribute on atoms use -xh.\n\n"
+
+        "Crystal structures are written using the <crystal>, <xfract>) etc., elements\n"
+        "if the OBMol has a OBGenericDataType::UnitCell data.\n\n"
+
+        "If the OBMol has no bonds, a <formula> element is written instead of the\n"
+        "normal <atomArray> and <atom> elements.\n\n"
+
+        "All these forms are handled transparently during reading. Only a subset of\n"
+        "CML elements and attributes are recognised, but these include most of those\n"
+        "which define chemical structure, see below.\n\n"
+
+        "The following are read:\n\n"
+
+        "- Elements:\n\n"
+        "  - molecule, atomArray, atom, bondArray, bond, atomParity, bondStereo\n"
+        "  - name, formula, crystal, scalar (contains crystal data)\n"
+        "  - string, stringArray, integer, integerArray, float floatArray, builtin\n\n"
+
+        "- Attributes:\n\n"
+        "  - On <molecule>: id, title, ref(in CMLReact)\n"
+        "  - On <atom>: id, atomId, atomID, elementType, x2, y2, x3, y3, z3, xy2, xyz3,\n"
+        "    xFract, yFract, zFract, xyzFract, hydrogenCount, formalCharge, isotope,\n"
+        "    isotopeNumber, spinMultiplicity, radical(from Marvin),\n"
+        "    atomRefs4 (for atomParity)\n"
+        "  - On <bond>: atomRefs2, order, CML1: atomRef, atomRef1, atomRef2\n\n"
+
         "Write Options for CML: -x[flags] (e.g. -x1ac)\n"
-        "  1  output CML1 (rather than CML2)\n"
-        "  a  output array format for atoms and bonds\n"
+        "  1  write CML1 (rather than CML2)\n"
+        "  a  write array format for atoms and bonds\n"
         "  A  write aromatic bonds as such, not Kekule form\n"
         "  h  use hydrogenCount for all hydrogens\n"
-        "  m  output metadata\n"
+        "  m  write metadata\n"
         "  x  omit XML and namespace declarations\n"
         "  c  continuous output: no formatting\n"
-        "  p  output properties\n"
+        "  p  write properties\n"
         "  N<prefix> add namespace prefix to elements\n\n"
+
         "Read Options, e.g. -a2\n"
-        "  2  input 2D rather than 3D coordinates if both provided\n\n"
+        "  2  read 2D rather than 3D coordinates if both provided\n\n"
+
         "In the absence of hydrogenCount and any explicit hydrogen on\n"
         "an atom, implicit hydrogen is assumed to be present appropriate\n"
         "to the radical or spinMultiplicity attributes on the atom or\n"
-        "its normal valency if they are not present.\n\n";
+        "its normal valency if they are not present.\n\n"
+        
+        "The XML formats require the XML text to be well formed but\n"
+        "generally interpret it fairly tolerantly. Unrecognised elements\n"
+        "and attributes are ignored and there are rather few error messages\n"
+        "when any required structures are not found. This laxity allows, for\n"
+        "instance, the reactant and product molecules to be picked out of a CML\n"
+        "React file using CML. Each format has an element which is regarded as\n"
+        "defining the object that OpenBabel will convert. For CML this is\n"
+        "<molecule>. Files can have multiple objects and these can be treated\n"
+        "the same as with other multiple object formats like SMILES and MDL\n"
+        "Molfile. So conversion can start at the nth object using the -fn option\n"
+        "and finish before the end using the -ln option. Multiple object XML files\n"
+        "also can be indexed and searched using FastSearch, although this has\n"
+        "not yet been extensively tested.\n\n";
     };
 
     virtual const char* SpecificationURL()
@@ -728,6 +774,8 @@ namespace OpenBabel
       {
         int indx1=0,indx2=0, ord=0;
         string bondstereo, BondStereoRefs;
+        string colour;
+        string label;
         bool PossibleBond = false;
 
         for(AttributeIter=BondIter->begin();AttributeIter!=BondIter->end();++AttributeIter)
@@ -788,6 +836,12 @@ namespace OpenBabel
                   ord = strtol(value.c_str(), &endptr, 10);
                 }
               }
+
+            else if(attrname=="color")
+              colour=value[0];
+
+            else if(attrname=="label")
+              label = value;
           }
 
         if(PossibleBond)
@@ -798,12 +852,27 @@ namespace OpenBabel
                 return false;
               }
             if(ord==0) //Bonds are single if order is not specified
-            {
-              ord=1;
-              //But unspecied bond order means cannot assign spinmultiplicity
-              _pmol->SetIsPatternStructure();
-            }
+              {
+                ord=1;
+                //But unspecied bond order means cannot assign spinmultiplicity
+                _pmol->SetIsPatternStructure();
+              }
             _pmol->AddBond(indx1,indx2,ord,0);
+
+            if(!colour.empty())
+              {
+                OBPairData *dp = new OBPairData();
+                dp->SetAttribute("color");
+                dp->SetValue(colour.c_str());
+                _pmol->GetBond(_pmol->NumBonds()-1)->SetData(dp);
+              }
+            if(!label.empty())
+              {
+                OBPairData *dp = new OBPairData();
+                dp->SetAttribute("label");
+                dp->SetValue(label.c_str());
+                _pmol->GetBond(_pmol->NumBonds()-1)->SetData(dp);
+              }
           }
       }
 
@@ -1702,6 +1771,14 @@ namespace OpenBabel
                     xmlTextWriterWriteFormatAttribute(writer(), C_ATOMREFS2,"%s %s",
                           ref1.c_str(), ref2.c_str());
                     xmlTextWriterWriteFormatAttribute(writer(), C_ORDER,"%s", ord.str().c_str());
+                    
+                    if(pbond->HasData("color"))
+                      xmlTextWriterWriteFormatAttribute(writer(), C_COLOR,"%s",
+                          pbond->GetData("color")->GetValue().c_str());
+
+                    if(pbond->HasData("label"))
+                      xmlTextWriterWriteFormatAttribute(writer(), C_LABEL,"%s",
+                          pbond->GetData("label")->GetValue().c_str());
 
                     if( (ctStereo_cit=ctStereos.find(pbond->GetIdx())) != ctStereos.end() )
                       {

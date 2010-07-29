@@ -34,7 +34,14 @@ set(formats_compchem
       turbomoleformat
       vaspformat
       zindoformat
-      )
+  )
+
+if(MSVC OR HAVE_REGEX_H)
+  set(formats_compchem
+      ${formats_compchem} gamessukformat
+  )
+endif(MSVC OR HAVE_REGEX_H)
+
 set(formats_misc
       APIInterface
       CSRformat
@@ -149,16 +156,12 @@ if(LIBXML2_FOUND)
   endif(MSVC90 OR Boost_FOUND)
 endif(LIBXML2_FOUND)
 
-if(NOT WIN32)
-  set(formats_compchem
-    ${formats_compchem}
-    gamessukformat
-  )
+if(HAVE_RPC_XDR_H)
   set(formats_misc
     ${formats_misc}
     xtcformat
   )
-endif(NOT WIN32)
+endif(HAVE_RPC_XDR_H)
 
 if(MINIMAL_BUILD)
   set(formats
@@ -197,7 +200,7 @@ if(MSVC)
     endforeach(format)
     add_library(${formatgroup} ${PLUGIN_TYPE} ${formatsources}
         "${openbabel_BINARY_DIR}/include/openbabel/babelconfig.h")
-    target_link_libraries(${formatgroup} ${libs} openbabel)
+    target_link_libraries(${formatgroup} ${libs} ${XDR_LIBRARY} openbabel)
     install(TARGETS ${formatgroup}
                   RUNTIME DESTINATION ${BIN_INSTALL_DIR}
                   LIBRARY DESTINATION ${OB_PLUGIN_INSTALL_DIR}

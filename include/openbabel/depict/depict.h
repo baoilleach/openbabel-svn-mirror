@@ -33,6 +33,9 @@ namespace OpenBabel
     #define OBDEPICT
   #endif
 
+  /**
+   * @since version 2.3
+   */
   class OBDEPICT OBDepict
   {
     public:
@@ -46,8 +49,10 @@ namespace OpenBabel
 
       enum OptionType{
         bwAtoms       = 0x0001,
-        drawTermC     = 0x0002,
-        drawAllC      = 0x0004
+        internalColor = 0x0002,
+        drawTermC     = 0x0010,
+        drawAllC      = 0x0020,
+
       };
 
       /**

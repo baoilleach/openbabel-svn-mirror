@@ -244,7 +244,8 @@ namespace OpenBabel
 "--property <attrib> <value> add or replace a property (SDF)\n"
 "--title <title> Add or replace molecule title\n"
 "--addtotitle <text> Append to title\n"
-"--addformula Append formula to title\n" ;
+"--addformula Append formula to title\n"
+"--writeconformers Output multiple conformers separately\n" ;
 
     //Append lines from OBOp plugins that work with OBMol
     OBMol dummymol; //just needed to carry class type information; messy!

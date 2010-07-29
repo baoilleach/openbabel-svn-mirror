@@ -16,12 +16,18 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ***********************************************************************/
 
-#ifdef HAVE_EIGEN2
+#if (defined(HAVE_EIGEN2))
 
 #include "qtpie.h"
 #include <openbabel/locale.h>
 
 using namespace std;
+
+#ifdef _MSC_VER
+// MSVC doesn't have error function erf use local implementation
+#include <openbabel/math/erf.h>
+using temperf::erf;
+#endif
 
 namespace OpenBabel
 {
