@@ -72,6 +72,7 @@ void test_divposesb()
 
   OBBuilder builder;
   OB_REQUIRE( builder.Build(mol) );
+  mol.AddHydrogens();
 
   OBDiversePosesB poses(mol, 0.25);
   OB_ASSERT( poses.GetSize() == 0 );

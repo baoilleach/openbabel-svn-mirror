@@ -137,6 +137,12 @@ namespace OpenBabel
     levels = vec;
     vector<vector3> pdummy;
     poses.insert(poses.begin(), PosePair(pdummy, 0.0)); // Add a dummy top node
+
+    // Remember the hydrogens
+    hydrogens.Resize(natoms);
+    for (int i=1; i<=natoms; i++)
+      if (ref.GetAtom(i)->IsHydrogen())
+        hydrogens.SetBitOn(i - 1);
   }
 
   bool OBDiversePosesB::AddPose(double* coords, double energy) {
@@ -145,10 +151,14 @@ namespace OpenBabel
     bool first_time = true;
 
     // Convert coords to vector<vector3>
-    vector<vector3> vcoords;
+
+    // Only use the heavy-atom coords for the alignment, but store
+    // the full set of coordinates in the tree
+    vector<vector3> vcoords, vcoords_hvy;
     for (unsigned int a = 0; a < natoms; ++a)
       vcoords.push_back(vector3(coords[a*3], coords[a*3+1], coords[a*3+2]));
-    align.SetRef(vcoords);
+    vcoords_hvy = GetHeavyAtomCoords(vcoords);
+    align.SetRef(vcoords_hvy); 
 
     while(true) {
 
@@ -164,7 +174,10 @@ namespace OpenBabel
       if (!first_time)
         ++sib;
       for (; sib != poses.end(node); ++sib) { // Iterate over children of node
-        align.SetTarget((*sib).first);
+        vector<vector3> tcoords = (*sib).first;
+        vector<vector3> tcoords_hvy = GetHeavyAtomCoords(tcoords);
+        align.SetTarget(tcoords_hvy);
+
         align.Align();
         rmsd = align.GetRMSD();
         n_rmsd++;
@@ -210,11 +223,20 @@ namespace OpenBabel
     return (a->second < b->second);
   }
 
+  vector<vector3> OBDiversePosesB::GetHeavyAtomCoords(const vector<vector3> &all_coords) {
+    vector<vector3> v_hvyatoms;
+    for (unsigned int a = 0; a < natoms; ++a)
+      if (!hydrogens.BitIsSet(a))
+        v_hvyatoms.push_back(all_coords[a]);
+    return v_hvyatoms;
+  }
+
   vector<double> OBDiversePosesB::UpdateConformers(OBMol &mol) {
 
     // Initialise a vector of pointers to the nodes of the tree
     vector <PosePair*> confs;
-    for (Tree_it node = poses.begin(); node != poses.end(); ++node)
+    // The leaf iterator will (in effect) iterate over the nodes just at the loweset level
+    for (Tree::leaf_iterator node = poses.begin(); node != poses.end(); ++node)
       if (node->first.size() > 0) // Don't include the dummy head node
         confs.push_back(&*(node));
 
@@ -227,11 +249,13 @@ namespace OpenBabel
     
     // Loop through the confs and chose a diverse bunch
     for (vpp::iterator conf = confs.begin(); conf!=confs.end(); ++conf) {
-      align.SetRef((*conf)->first);
+      vector<vector3> ref_hvy_coords = GetHeavyAtomCoords( (*conf)->first );
+      align.SetRef(ref_hvy_coords);
 
       bool keepconf = true;
       for (vpp::iterator chosen = chosen_confs.begin(); chosen!=chosen_confs.end(); ++chosen) {
-        align.SetTarget((*chosen)->first);
+        vector<vector3> target_hvy_coords = GetHeavyAtomCoords( (*chosen)->first );
+        align.SetTarget(target_hvy_coords);
         align.Align();
         double rmsd = align.GetRMSD();
         if (rmsd < cutoff) {
@@ -239,13 +263,11 @@ namespace OpenBabel
           break;
         }
       }
-
       if (keepconf)
         chosen_confs.push_back(*conf);
-      
     }
 
-    cout << "Tree size " << GetSize() << "Len chosen confs = " << chosen_confs.size();
+    cout << "Tree size " << GetSize() << " Confs = " << confs.size() << " Chosen confs = " << chosen_confs.size() << endl;
 
     // Add confs to the molecule's conformer data and return the energies (these will be added by the calling function)
     vector<double> energies;
@@ -435,6 +457,10 @@ std::ostream& operator<< (std::ostream &out, std::vector<V> &v) {
     if (_mol.NumRotors() == 0)
       return 0;
   
+    // Get estimate of lowest energy conf using FastRotorSearch
+    FastRotorSearch(true);
+    double lowest_energy = Energy();
+
     int origLogLevel = _loglvl;
 
     // Remove all conformers (e.g. from previous conformer generators) except for current conformer
@@ -464,23 +490,30 @@ std::ostream& operator<< (std::ostream &out, std::vector<V> &v) {
     // Can take shortcut later, as 4 components of the energy will be constant
     SetupPointers();
     energy_offset = E_Bond(false) + E_Angle(false) + E_StrBnd(false) + E_OOP(false);
+    lowest_energy -= energy_offset;
 
     OBRotorKeys rotorKeys;
     OBRotor* rotor = rl.BeginRotor(ri);
-    for (int i = 1; i < rl.Size() + 1; ++i, rotor = rl.NextRotor(ri)) // foreach rotor
+    unsigned long int combinations = 1;
+    for (int i = 1; i < rl.Size() + 1; ++i, rotor = rl.NextRotor(ri)) { // foreach rotor
       rotorKeys.AddRotor(rotor->GetResolution().size());
-    
+      combinations *= rotor->GetResolution().size();
+    }
+
     // Main loop over rotamers
     OBDiversePosesB divposes(_mol, 0.25);
     do {
       _mol.SetCoordinates(store_initial);
-      cout << rotorKeys.GetKey() << ": ";
       rotamerlist.SetCurrentCoordinates(_mol, rotorKeys.GetKey());
       SetupPointers();
       double currentE = E_VDW(false) + E_Torsion(false) + E_Electrostatic(false);
-      bool added = divposes.AddPose(_mol.GetCoordinates(), currentE);
-      cout << currentE << " " << added << endl;
+      if (currentE < lowest_energy + 50) { // Don't retain high energy poses
+        divposes.AddPose(_mol.GetCoordinates(), currentE);
+        if (currentE < lowest_energy)
+          lowest_energy = currentE;
+      }
     } while (rotorKeys.Next());
+    cout << "Tot combinations = " << combinations << "\n";
 
     // Get results from tree
     _energies = divposes.UpdateConformers(_mol);
