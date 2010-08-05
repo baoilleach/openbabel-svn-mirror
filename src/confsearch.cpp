@@ -27,6 +27,7 @@ GNU General Public License for more details.
 #include <openbabel/tree/tree.hh>
 #include <openbabel/tree/tree_util.hh>
 #include <openbabel/math/vector3.h>
+#include <vld.h>
 
 #include <float.h> // For DBL_MAX
 #include <algorithm> // For min
@@ -123,15 +124,22 @@ namespace OpenBabel
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  OBDiversePosesB::OBDiversePosesB(const OBMol &ref, double RMSD) {
+  OBDiversePosesB::OBDiversePosesB(const OBMol &ref, double RMSD, bool percise) {
+    _percise = percise;
     natoms = ref.NumAtoms();
     align.SetRefMol(ref);
     n_rmsd = 0;
     cutoff = RMSD;
 
     static const double arr[] = {3.0, 2.0, 1.5, 1.0, 0.5, 0.25};
+      
     std::vector<double> vec (arr, arr + sizeof(arr) / sizeof(arr[0]) );
     vec.erase(std::remove_if(vec.begin(), vec.end(), std::bind2nd(std::less<double>(), (cutoff + 0.1) )), vec.end());
+    if (_percise) { // Remove the bins for 3.0, 2.0 and 1.5
+      vec.resize(1);
+      vec[0] = 1.0;
+      // vec.erase(std::remove_if(vec.begin(), vec.end(), std::bind2nd(std::greater<double>(), (0.25) )), vec.end());
+    }
     vec.push_back(cutoff);
 
     levels = vec;
@@ -146,6 +154,13 @@ namespace OpenBabel
   }
 
   bool OBDiversePosesB::AddPose(double* coords, double energy) {
+    vector<vector3> vcoords, vcoords_hvy;
+    for (unsigned int a = 0; a < natoms; ++a)
+      vcoords.push_back(vector3(coords[a*3], coords[a*3+1], coords[a*3+2]));
+    return AddPose(vcoords, energy);
+  }
+
+  bool OBDiversePosesB::AddPose(vector<vector3> vcoords, double energy) {
     Tree_it node = poses.begin();
     int level = 0;
     bool first_time = true;
@@ -154,10 +169,7 @@ namespace OpenBabel
 
     // Only use the heavy-atom coords for the alignment, but store
     // the full set of coordinates in the tree
-    vector<vector3> vcoords, vcoords_hvy;
-    for (unsigned int a = 0; a < natoms; ++a)
-      vcoords.push_back(vector3(coords[a*3], coords[a*3+1], coords[a*3+2]));
-    vcoords_hvy = GetHeavyAtomCoords(vcoords);
+    vector<vector3> vcoords_hvy = GetHeavyAtomCoords(vcoords);
     align.SetRef(vcoords_hvy); 
 
     while(true) {
@@ -167,6 +179,7 @@ namespace OpenBabel
       
       Tree_it min_node = poses.end(); // Point it at the end iterator (will test its value later)
       double rmsd;
+      double min_rmsd = DBL_MAX;
 
       Tree_sit sib = poses.begin(node);
       // Skip the first child after the first time through this loop
@@ -184,6 +197,7 @@ namespace OpenBabel
         if (rmsd < levels.at(level)) {
           if (rmsd < cutoff)
             return false;
+
           min_node = sib;
           break; // Exit as soon as one is found
         }
@@ -219,16 +233,16 @@ namespace OpenBabel
     return poses.size() - 1; // Remove the dummy
   }
 
-  bool sortpred(const OBDiversePosesB::PosePair *a, const OBDiversePosesB::PosePair *b) {
-    return (a->second < b->second);
-  }
-
   vector<vector3> OBDiversePosesB::GetHeavyAtomCoords(const vector<vector3> &all_coords) {
     vector<vector3> v_hvyatoms;
     for (unsigned int a = 0; a < natoms; ++a)
       if (!hydrogens.BitIsSet(a))
         v_hvyatoms.push_back(all_coords[a]);
     return v_hvyatoms;
+  }
+
+  bool sortpred(const OBDiversePosesB::PosePair *a, const OBDiversePosesB::PosePair *b) {
+    return (a->second < b->second);
   }
 
   vector<double> OBDiversePosesB::UpdateConformers(OBMol &mol) {
@@ -451,8 +465,78 @@ std::ostream& operator<< (std::ostream &out, std::vector<V> &v) {
   return out;
 }
 
+vector<vector3> GetHeavyAtomCoords(const OBMol* mol, const vector<vector3> &all_coords) {
+  vector<vector3> v_hvyatoms;
+  for (unsigned int a = 1; a <= mol->NumAtoms(); ++a)
+    if (!mol->GetAtom(a)->IsHydrogen())
+      v_hvyatoms.push_back(all_coords[a]);
+  return v_hvyatoms;
+}
 
- int OBForceField::DiverseConfGen()
+vector<double> NewUpdateConformers(OBMol* mol, OBDiversePosesB* divposes) {
+  double cutoff = 0.25;
+
+  OBDiversePosesB::Tree* poses = divposes->GetTree(); 
+  
+  // Initialise a vector of pointers to the nodes of the tree
+  vector <OBDiversePosesB::PosePair*> confs;
+  // The leaf iterator will (in effect) iterate over the nodes just at the loweset level
+  for (OBDiversePosesB::Tree::leaf_iterator node = poses->begin(); node != poses->end(); ++node)
+    if (node->first.size() > 0) // Don't include the dummy head node
+      confs.push_back(&*(node));
+
+  // Sort the confs by energy (lowest first)
+  sort(confs.begin(), confs.end(), sortpred);
+
+  cout << " Tree size = " << divposes->GetSize() <<  " Confs = " << confs.size() << endl;
+
+  typedef vector<OBDiversePosesB::PosePair*> vpp;
+  unsigned int oldsize;
+  do {
+    oldsize = confs.size();
+
+    // Loop through the confs and put them into another tree
+    OBDiversePosesB* newtree = new OBDiversePosesB(*mol, cutoff, true);
+    for (vpp::iterator conf = confs.begin(); conf!=confs.end(); ++conf) {
+      newtree->AddPose((*conf)->first, (*conf)->second);
+    }
+
+    confs.clear();
+    // The leaf iterator will (in effect) iterate over the nodes just at the loweset level
+    for (OBDiversePosesB::Tree::leaf_iterator node = newtree->GetTree()->begin(); node != newtree->GetTree()->end(); ++node)
+      if (node->first.size() > 0) // Don't include the dummy head node
+        confs.push_back(&*(node));
+
+    // Sort the confs by energy (lowest first)
+    sort(confs.begin(), confs.end(), sortpred);
+
+    cout << " New tree size = " << newtree->GetSize() <<  " Confs = " << confs.size() << endl;
+
+    delete newtree;
+  } while (oldsize - confs.size() > 50);
+
+  // Add confs to the molecule's conformer data and return the energies (these will be added by the calling function)
+  vector<double> energies;
+/*
+  for (vpp::iterator chosen = chosen_confs.begin(); chosen!=chosen_confs.end(); ++chosen) {
+    energies.push_back((*chosen)->second);
+    
+    // To avoid making copies of vectors or vector3s, I am using pointers throughout
+    vector<vector3> *tmp = &((*chosen)->first);
+    double *confCoord = new double [mol->NumAtoms() * 3];
+    for(unsigned int a = 0; a<mol->NumAtoms(); ++a) {
+      vector3* pv3 = &(*tmp)[a];
+      confCoord[a*3] = pv3->x();
+      confCoord[a*3 + 1] = pv3->y();
+      confCoord[a*3 + 2] = pv3->z();
+    }
+    mol->AddConformer(confCoord);
+  }
+  */
+  return energies;
+}
+
+int OBForceField::DiverseConfGen(double rmsd, int nconfs, double energy_gap)
   {
     if (_mol.NumRotors() == 0)
       return 0;
@@ -483,8 +567,8 @@ std::ostream& operator<< (std::ostream &out, std::vector<V> &v) {
     rotamerlist.SetBaseCoordinateSets(_mol);
     rotamerlist.Setup(_mol, rl);
 
-    double *bestconf = new double [_mol.NumAtoms() * 3]; // store the best conformer to date
-    memcpy((char*)bestconf,(char*)_mol.GetCoordinates(),sizeof(double)*3*_mol.NumAtoms());
+//     double *bestconf = new double [_mol.NumAtoms() * 3]; // store the best conformer to date
+//     memcpy((char*)bestconf,(char*)_mol.GetCoordinates(),sizeof(double)*3*_mol.NumAtoms());
 
     double energy_offset;
     // Can take shortcut later, as 4 components of the energy will be constant
@@ -501,22 +585,26 @@ std::ostream& operator<< (std::ostream &out, std::vector<V> &v) {
     }
 
     // Main loop over rotamers
-    OBDiversePosesB divposes(_mol, 0.25);
+    OBDiversePosesB divposes(_mol, rmsd);
     do {
       _mol.SetCoordinates(store_initial);
       rotamerlist.SetCurrentCoordinates(_mol, rotorKeys.GetKey());
       SetupPointers();
       double currentE = E_VDW(false) + E_Torsion(false) + E_Electrostatic(false);
-      if (currentE < lowest_energy + 50) { // Don't retain high energy poses
-        divposes.AddPose(_mol.GetCoordinates(), currentE);
+      if (currentE < lowest_energy + energy_gap) { // Don't retain high energy poses
+        if (nconfs != 1)
+          divposes.AddPose(_mol.GetCoordinates(), currentE);
         if (currentE < lowest_energy)
           lowest_energy = currentE;
       }
     } while (rotorKeys.Next());
     cout << "Tot combinations = " << combinations << "\n";
 
-    // Get results from tree
-    _energies = divposes.UpdateConformers(_mol);
+    if (nconfs != 1 && nconfs != 2) { // Get results from tree
+      _energies = NewUpdateConformers(&_mol, &divposes);
+    }
+
+
     // Add back the energy offset
     transform(_energies.begin(), _energies.end(), _energies.begin(), bind2nd(plus<double>(), energy_offset));
 
