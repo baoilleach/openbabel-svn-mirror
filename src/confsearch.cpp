@@ -244,6 +244,10 @@ namespace OpenBabel
   bool sortpred(const OBDiversePosesB::PosePair *a, const OBDiversePosesB::PosePair *b) {
     return (a->second < b->second);
   }
+  bool sortpred_b(const OBDiversePosesB::PosePair& a, const OBDiversePosesB::PosePair& b) {
+    return (a.second < b.second);
+  }
+
 
   vector<double> OBDiversePosesB::UpdateConformers(OBMol &mol) {
 
@@ -479,41 +483,41 @@ vector<double> NewUpdateConformers(OBMol* mol, OBDiversePosesB* divposes) {
   OBDiversePosesB::Tree* poses = divposes->GetTree(); 
   
   // Initialise a vector of pointers to the nodes of the tree
-  vector <OBDiversePosesB::PosePair*> confs;
+  vector <OBDiversePosesB::PosePair> confs;
   // The leaf iterator will (in effect) iterate over the nodes just at the loweset level
   for (OBDiversePosesB::Tree::leaf_iterator node = poses->begin(); node != poses->end(); ++node)
     if (node->first.size() > 0) // Don't include the dummy head node
-      confs.push_back(&*(node));
+      confs.push_back(*node);
 
   // Sort the confs by energy (lowest first)
-  sort(confs.begin(), confs.end(), sortpred);
+  sort(confs.begin(), confs.end(), sortpred_b);
 
   cout << " Tree size = " << divposes->GetSize() <<  " Confs = " << confs.size() << endl;
 
-  typedef vector<OBDiversePosesB::PosePair*> vpp;
+  typedef vector<OBDiversePosesB::PosePair> vpp;
   unsigned int oldsize;
   do {
     oldsize = confs.size();
 
     // Loop through the confs and put them into another tree
-    OBDiversePosesB* newtree = new OBDiversePosesB(*mol, cutoff, true);
+    OBDiversePosesB* newtree = new OBDiversePosesB(*mol, cutoff, false);
     for (vpp::iterator conf = confs.begin(); conf!=confs.end(); ++conf) {
-      newtree->AddPose((*conf)->first, (*conf)->second);
+      newtree->AddPose(conf->first, conf->second);
     }
 
     confs.clear();
     // The leaf iterator will (in effect) iterate over the nodes just at the loweset level
     for (OBDiversePosesB::Tree::leaf_iterator node = newtree->GetTree()->begin(); node != newtree->GetTree()->end(); ++node)
       if (node->first.size() > 0) // Don't include the dummy head node
-        confs.push_back(&*(node));
+        confs.push_back(*node);
 
     // Sort the confs by energy (lowest first)
-    sort(confs.begin(), confs.end(), sortpred);
+    sort(confs.begin(), confs.end(), sortpred_b);
 
     cout << " New tree size = " << newtree->GetSize() <<  " Confs = " << confs.size() << endl;
 
     delete newtree;
-  } while (oldsize - confs.size() > 50);
+  } while (oldsize != confs.size() );
 
   // Add confs to the molecule's conformer data and return the energies (these will be added by the calling function)
   vector<double> energies;
