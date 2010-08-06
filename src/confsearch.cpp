@@ -169,6 +169,8 @@ namespace OpenBabel
 
     vector<Tree_it> nodes, min_nodes;
     nodes.push_back(node);
+    vector<int> stack_levels;
+    stack_levels.push_back(level);
 
     vector<Tree_it> insert_pt;
     vector<PosePair> insert_data;
@@ -177,6 +179,8 @@ namespace OpenBabel
     while(nodes.size() > 0) { // Using stack-based recursion
       node = nodes.back();
       nodes.pop_back();
+      level = stack_levels.back();
+      stack_levels.pop_back();
 
       // Find whether the molecule is similar to any of the children of this node.
       // - min_node will hold the result of this search
@@ -203,7 +207,9 @@ namespace OpenBabel
             return false;
 
           min_nodes.push_back(sib);
-          break; // Exit as soon as one is found
+          if (!_percise)
+            // Exit as soon as one is found
+            break;
         }
       } // end of for loop
 
@@ -226,6 +232,7 @@ namespace OpenBabel
         level++;
       }
       nodes.push_back(node);
+      stack_levels.push_back(level);
 
       first_time = false;
 
