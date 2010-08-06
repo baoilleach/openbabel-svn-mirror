@@ -170,6 +170,10 @@ namespace OpenBabel
     vector<Tree_it> nodes, min_nodes;
     nodes.push_back(node);
 
+    vector<Tree_it> insert_pt;
+    vector<PosePair> insert_data;
+    vector<int> insert_level;
+
     while(nodes.size() > 0) { // Using stack-based recursion
       node = nodes.back();
       nodes.pop_back();
@@ -204,13 +208,13 @@ namespace OpenBabel
       } // end of for loop
 
       if (min_nodes.size() == 0) {
-        // No similar molecule found, so append it the children
-        // and add it as the first child all the way down through the levels
-        
-        for(int k = level; k < levels.size(); ++k) {
-          node = poses.append_child(node, PosePair(vcoords, energy));
-        }
-        //kptree::print_tree_bracketed(poses);
+        // No similar molecule found, so remember it for later so that we can
+        // append it the children and add it as the first child all the way down
+        // through the levels. The reason we don't add it now is that the molecule
+        // could still be rejected for addition to the tree.
+        insert_pt.push_back(node);
+        insert_level.push_back(level);
+        insert_data.push_back(PosePair(vcoords, energy));
         continue;
       }
 
@@ -226,6 +230,22 @@ namespace OpenBabel
       first_time = false;
 
     } // end of while loop
+
+
+    // If we get here, then the molecule has been accepted for addition to the tree
+    vector<PosePair>::iterator b = insert_data.begin();
+    vector<int>::iterator c = insert_level.begin();
+    for (vector<Tree_it>::iterator a = insert_pt.begin(); a != insert_pt.end(); ++a, ++b, ++c) {
+      node = *a;
+      for (int k = *c; k < levels.size(); ++k) {
+        node = poses.append_child(node, *b);
+      }
+    }
+    
+    //for(int k = level; k < levels.size(); ++k) {
+    //  node = poses.append_child(node, PosePair(vcoords, energy));
+    //}
+
 
     return true;
   }
