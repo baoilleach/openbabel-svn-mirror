@@ -168,6 +168,7 @@ namespace OpenBabel
     align.SetRef(vcoords_hvy); 
 
     vector<Tree_it> nodes, min_nodes;
+    vector<double> min_nodes_rmsds;
     nodes.push_back(node);
     vector<int> stack_levels;
     stack_levels.push_back(level);
@@ -186,6 +187,7 @@ namespace OpenBabel
       // - min_node will hold the result of this search
       
       min_nodes.clear();
+      min_nodes_rmsds.clear();
       double rmsd;
       double min_rmsd = DBL_MAX;
 
@@ -207,9 +209,11 @@ namespace OpenBabel
             return false;
 
           min_nodes.push_back(sib);
-          if (!_percise)
-            // Exit as soon as one is found
+          min_nodes_rmsds.push_back(rmsd);
+
+          if (!_percise) // Exit as soon as one is found
             break;
+
         }
       } // end of for loop
 
@@ -225,14 +229,19 @@ namespace OpenBabel
       }
 
       // If we reach here, then a similar molecule was found
-      node = min_nodes.at(0);
-      level++;
-      while (rmsd < levels.at(level)) {
-        node = poses.child(node, 0); // Get the first child
-        level++;
+      int startlevel = level;
+      vector<double>::const_iterator n_rmsd = min_nodes_rmsds.begin();
+      for (vector<Tree_it>::iterator n = min_nodes.begin(); n != min_nodes.end(); ++n, ++n_rmsd) {
+        node = *n;
+        rmsd = *n_rmsd;
+        level = startlevel + 1;
+        while (rmsd < levels.at(level)) {
+          node = poses.child(node, 0); // Get the first child
+          level++;
+        }
+        nodes.push_back(node);
+        stack_levels.push_back(level);
       }
-      nodes.push_back(node);
-      stack_levels.push_back(level);
 
       first_time = false;
 
@@ -510,8 +519,8 @@ vector<double> NewUpdateConformers(OBMol* mol, OBDiversePosesB* divposes) {
 
   OBDiversePosesB::Tree* poses = divposes->GetTree(); 
   
-  // Initialise a vector of pointers to the nodes of the tree
-  vector <OBDiversePosesB::PosePair> confs;
+  vector <OBDiversePosesB::PosePair> confs, newconfs;
+
   // The leaf iterator will (in effect) iterate over the nodes just at the loweset level
   for (OBDiversePosesB::Tree::leaf_iterator node = poses->begin(); node != poses->end(); ++node)
     if (node->first.size() > 0) // Don't include the dummy head node
@@ -523,29 +532,18 @@ vector<double> NewUpdateConformers(OBMol* mol, OBDiversePosesB* divposes) {
   cout << " Tree size = " << divposes->GetSize() <<  " Confs = " << confs.size() << endl;
 
   typedef vector<OBDiversePosesB::PosePair> vpp;
-  unsigned int oldsize;
-  do {
-    oldsize = confs.size();
-
-    // Loop through the confs and put them into another tree
-    OBDiversePosesB* newtree = new OBDiversePosesB(*mol, cutoff, false);
-    for (vpp::iterator conf = confs.begin(); conf!=confs.end(); ++conf) {
-      newtree->AddPose(conf->first, conf->second);
+    
+  // Loop through the confs and filter using a tree
+  newconfs.clear();
+  OBDiversePosesB* newtree = new OBDiversePosesB(*mol, cutoff, true);
+  for (vpp::iterator conf = confs.begin(); conf!=confs.end(); ++conf) {
+    if (newtree->AddPose(conf->first, conf->second)) {
+      newconfs.push_back(*conf);
     }
+  }
 
-    confs.clear();
-    // The leaf iterator will (in effect) iterate over the nodes just at the loweset level
-    for (OBDiversePosesB::Tree::leaf_iterator node = newtree->GetTree()->begin(); node != newtree->GetTree()->end(); ++node)
-      if (node->first.size() > 0) // Don't include the dummy head node
-        confs.push_back(*node);
-
-    // Sort the confs by energy (lowest first)
-    sort(confs.begin(), confs.end(), sortpred_b);
-
-    cout << " New tree size = " << newtree->GetSize() <<  " Confs = " << confs.size() << endl;
-
-    delete newtree;
-  } while (oldsize != confs.size() );
+  cout << " New tree size = " << newtree->GetSize() <<  " Confs = " << newconfs.size() << endl;
+  delete newtree;
 
   // Add confs to the molecule's conformer data and return the energies (these will be added by the calling function)
   vector<double> energies;
