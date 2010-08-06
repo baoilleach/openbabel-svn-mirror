@@ -135,11 +135,6 @@ namespace OpenBabel
       
     std::vector<double> vec (arr, arr + sizeof(arr) / sizeof(arr[0]) );
     vec.erase(std::remove_if(vec.begin(), vec.end(), std::bind2nd(std::less<double>(), (cutoff + 0.1) )), vec.end());
-    if (_percise) { // Remove the bins for 3.0, 2.0 and 1.5
-      vec.resize(1);
-      vec[0] = 1.0;
-      // vec.erase(std::remove_if(vec.begin(), vec.end(), std::bind2nd(std::greater<double>(), (0.25) )), vec.end());
-    }
     vec.push_back(cutoff);
 
     levels = vec;
@@ -172,12 +167,17 @@ namespace OpenBabel
     vector<vector3> vcoords_hvy = GetHeavyAtomCoords(vcoords);
     align.SetRef(vcoords_hvy); 
 
-    while(true) {
+    vector<Tree_it> nodes, min_nodes;
+    nodes.push_back(node);
+
+    while(nodes.size() > 0) { // Using stack-based recursion
+      node = nodes.back();
+      nodes.pop_back();
 
       // Find whether the molecule is similar to any of the children of this node.
       // - min_node will hold the result of this search
       
-      Tree_it min_node = poses.end(); // Point it at the end iterator (will test its value later)
+      min_nodes.clear();
       double rmsd;
       double min_rmsd = DBL_MAX;
 
@@ -198,12 +198,12 @@ namespace OpenBabel
           if (rmsd < cutoff)
             return false;
 
-          min_node = sib;
+          min_nodes.push_back(sib);
           break; // Exit as soon as one is found
         }
       } // end of for loop
 
-      if (min_node == poses.end()) {
+      if (min_nodes.size() == 0) {
         // No similar molecule found, so append it the children
         // and add it as the first child all the way down through the levels
         
@@ -211,16 +211,17 @@ namespace OpenBabel
           node = poses.append_child(node, PosePair(vcoords, energy));
         }
         //kptree::print_tree_bracketed(poses);
-        return true;
+        continue;
       }
 
       // If we reach here, then a similar molecule was found
-      node = min_node;
+      node = min_nodes.at(0);
       level++;
       while (rmsd < levels.at(level)) {
         node = poses.child(node, 0); // Get the first child
         level++;
       }
+      nodes.push_back(node);
 
       first_time = false;
 
