@@ -32,9 +32,12 @@ namespace OpenBabel
   class OBAPI OBDiversePosesB {
     public:
       OBDiversePosesB(const OBMol &ref, double RMSD, bool percise=false);
+      ~OBDiversePosesB() {
+        delete palign; // Allocated with 'new'
+      }
       bool AddPose(double* coords, double energy);
       bool AddPose(vector<vector3> coords, double energy);
-      vector<double> UpdateConformers(OBMol &mol);
+      //vector<double> UpdateConformers(OBMol &mol);
       typedef std::pair<vector<vector3>, double> PosePair;
       typedef tree<PosePair> Tree;
       Tree* GetTree() { return &poses; }
@@ -51,8 +54,8 @@ namespace OpenBabel
       int natoms;
       Tree poses;
       std::vector<double> levels;
-      OBAlign align;
-      double cutoff;
+      OBAlign* palign;
+      const double cutoff;
       int n_rmsd;
       OBBitVec hydrogens;
     };

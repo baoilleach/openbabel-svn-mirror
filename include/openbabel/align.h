@@ -50,6 +50,7 @@ namespace OpenBabel
     double GetRMSD();
     vector<vector3> GetAlignment();
     bool UpdateCoords(OBMol* target);
+    inline size_t NumAutos() {return _pg.permutations.size();}
 
   private:
     bool _ready;
@@ -70,7 +71,7 @@ namespace OpenBabel
     Eigen::MatrixXd _mref, _mtarget;
     void VectorsToMatrix(const vector<vector3> *pcoords, Eigen::MatrixXd &coords);
     Eigen::Vector3d MoveToOrigin(Eigen::MatrixXd &coords);
-    void SimpleAlign(Eigen::MatrixXd &mtarget);
+    void SimpleAlign(const Eigen::MatrixXd &mtarget);
     void GetAutomorphisms();
     // Generate a mapping from the permutation map to the index of
     // correct column in _mtarget. Need to handle the fact that the

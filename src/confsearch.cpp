@@ -126,12 +126,15 @@ namespace OpenBabel
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  OBDiversePosesB::OBDiversePosesB(const OBMol &ref, double RMSD, bool percise) {
+  OBDiversePosesB::OBDiversePosesB(const OBMol &ref, double RMSD, bool percise):
+          palign(new OBAlign(false, percise)), cutoff(RMSD)
+  {
     _percise = percise;
+
     natoms = ref.NumAtoms();
-    align.SetRefMol(ref);
+    palign->SetRefMol(ref);
+    cout << "Numatoms" << palign->NumAutos() << endl;
     n_rmsd = 0;
-    cutoff = RMSD;
 
     static const double arr[] = {3.0, 2.0, 1.5, 1.0, 0.5, 0.25};
       
@@ -167,7 +170,7 @@ namespace OpenBabel
     // Only use the heavy-atom coords for the alignment, but store
     // the full set of coordinates in the tree
     vector<vector3> vcoords_hvy = GetHeavyAtomCoords(vcoords);
-    align.SetRef(vcoords_hvy); 
+    palign->SetRef(vcoords_hvy); 
 
     vector<Tree_it> nodes, min_nodes;
     vector<double> min_nodes_rmsds;
@@ -201,10 +204,10 @@ namespace OpenBabel
       for (; sib != poses.end(node); ++sib) { // Iterate over children of node
         vector<vector3> tcoords = (*sib).first;
         vector<vector3> tcoords_hvy = GetHeavyAtomCoords(tcoords);
-        align.SetTarget(tcoords_hvy);
+        palign->SetTarget(tcoords_hvy);
 
-        align.Align();
-        rmsd = align.GetRMSD();
+        palign->Align();
+        rmsd = palign->GetRMSD();
         n_rmsd++;
         if (rmsd < levels.at(level)) {
           if (rmsd < cutoff)
@@ -287,7 +290,7 @@ namespace OpenBabel
     return (a.second < b.second);
   }
 
-
+/*
   vector<double> OBDiversePosesB::UpdateConformers(OBMol &mol) {
 
     // Initialise a vector of pointers to the nodes of the tree
@@ -345,7 +348,7 @@ namespace OpenBabel
 
     return energies;
   }
-
+*/
   int OBForceField::FastRotorSearch(bool permute)
   {
     if (_mol.NumRotors() == 0)
@@ -617,7 +620,7 @@ int OBForceField::DiverseConfGen(double rmsd, int nconfs, double energy_gap)
     }
 
     // Main loop over rotamers
-    OBDiversePosesB divposes(_mol, rmsd);
+    OBDiversePosesB divposes(_mol, rmsd, false);
     do {
       _mol.SetCoordinates(store_initial);
       rotamerlist.SetCurrentCoordinates(_mol, rotorKeys.GetKey());
