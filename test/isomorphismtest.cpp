@@ -8,6 +8,12 @@
 using namespace std;
 using namespace OpenBabel;
 
+std::string GetFilename(const std::string &filename)
+{
+  string path = TESTDATADIR + filename;
+  return path;
+}
+
 void testIsomorphism1()
 {
   OBMol mol;
@@ -54,6 +60,104 @@ void testIsomorphism2()
   delete mapper;
 }
 
+void testIsomorphismMask()
+{
+  // read file: 3 6-rings
+  //
+  //     /\ /\ /\
+  //    |  |  |  |
+  //     \/ \/ \/
+  //
+  OBMol mol;
+  OBConversion conv;
+  conv.SetInFormat("cml");
+  std::ifstream ifs(GetFilename("isomorphism1.cml").c_str());
+  OB_REQUIRE( ifs );
+  conv.Read(&mol, &ifs);
+
+  OBQuery *query = CompileSmilesQuery("C1CCCCC1");
+  OBIsomorphismMapper *mapper = OBIsomorphismMapper::GetInstance(query);
+  
+  // no mask
+  OBIsomorphismMapper::Mappings maps = mapper->MapUnique(&mol);
+  cout << maps.size() << endl;
+  OB_ASSERT( maps.size() == 3 );
+
+  // mask first ring
+  OBBitVec mask;
+  for (int i = 0; i < 6; ++i)
+    mask.SetBitOn(i+1);
+  maps = mapper->MapUnique(&mol, mask);
+  cout << maps.size() << endl;
+  OB_ASSERT( maps.size() == 1 );
+
+  // mask second ring also
+  for (int i = 6; i < 10; ++i)
+    mask.SetBitOn(i+1);
+  maps = mapper->MapUnique(&mol, mask);
+  cout << maps.size() << endl;
+  OB_ASSERT( maps.size() == 2 );
+
+  // just mask last ring (atomIds 7-8, 10-13)
+  mask.Clear();
+  for (int i = 10; i < 14; ++i)
+    mask.SetBitOn(i+1);
+  mask.SetBitOn(7 + 1); mask.SetBitOn(8 + 1);
+  maps = mapper->MapUnique(&mol, mask);
+  cout << maps.size() << endl;
+  OB_ASSERT( maps.size() == 1 ); // Should be same result as masking just the first ring
+
+  delete query;
+  delete mapper;
+}
+
+void testAutomorphismMask() {
+  // read file: 3 6-rings
+  //
+  //     /\ /\ /\
+  //    |  |  |  |
+  //     \/ \/ \/
+  //
+  cout <<  "testAutomorphismMask" << endl;
+  OBMol mol;
+  OBConversion conv;
+  conv.SetInFormat("cml");
+  std::ifstream ifs(GetFilename("isomorphism1.cml").c_str());
+  OB_REQUIRE( ifs );
+  conv.Read(&mol, &ifs);
+
+  OBIsomorphismMapper::Mappings maps; 
+
+  // First of all, how many automorphisms are there without any mask?
+  // This takes about 20 seconds, so you may want to comment this out while debugging
+  maps = FindAutomorphisms(&mol);
+  cout << maps.size() << endl;
+  OB_ASSERT( maps.size() == 4 );
+
+  // Now, let's remove the bridge (atomId 6) of the central ring.
+  //
+  //     /\ /\ /\
+  //    |  |  |  |
+  //     \/    \/
+  // both rings can be flipped around exocyclic bond, the whole molecule can be mirrored
+  // horizontally, this results in 2 x 2 x 2 = 8 automorphisms
+  OBBitVec mask;
+  mask.SetRangeOn(1, mol.NumAtoms());
+  mask.SetBitOff(6+1);
+  maps = FindAutomorphisms(&mol, mask);
+  cout << maps.size() << endl;
+  OB_ASSERT( maps.size() == 8 );
+
+  // Verify that atom Id 6 does not occur anywhere in the mappings
+  OBIsomorphismMapper::Mappings::const_iterator a;
+  OBIsomorphismMapper::Mapping::const_iterator b;
+  for (a = maps.begin(); a != maps.end(); ++a)
+    for (b = a->begin(); b!= a->end(); ++b) {
+      OB_ASSERT( b->first != 6 );
+      OB_ASSERT( b->second != 6 );
+    }
+}
+
 int main() 
 {
   // Define location of file formats for testing
@@ -63,8 +167,10 @@ int main()
     putenv(env);
   #endif  
 
-//  testIsomorphism1();
+  testIsomorphism1();
   testIsomorphism2();
+  testIsomorphismMask();
+  testAutomorphismMask(); 
 
   return 0;
 }

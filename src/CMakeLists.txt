@@ -66,6 +66,7 @@ set(ops
   ops/partialcharges.cpp
   ops/readconformers.cpp
   ops/sort.cpp
+  ops/opisomorph.cpp
   ops/xout.cpp
 )
 if (EIGEN2_FOUND)
@@ -192,7 +193,10 @@ add_library(openbabel ${BUILD_TYPE}
   )
 
 if(NOT WIN32)
-  set(libs ${libs} m dl)
+  set(libs ${libs} m)
+  if(HAVE_LIBDL)
+    set(libs ${libs} dl)
+  endif(HAVE_LIBDL)
 endif(NOT WIN32)
 
 if(ZLIB_FOUND)

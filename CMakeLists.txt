@@ -125,6 +125,7 @@ endif(MSVC)
 include(CheckIncludeFile)
 include(CheckIncludeFileCXX)
 include(CheckSymbolExists)
+include(CheckLibraryExists)
 include(CheckTypeSize)
 include(CheckCSourceCompiles)
 
@@ -141,6 +142,9 @@ check_symbol_exists(snprintf      "stdio.h"    HAVE_SNPRINTF)
 check_symbol_exists(sranddev      "stdlib.h"   HAVE_SRANDDEV)
 check_symbol_exists(strcasecmp    "string.h"   HAVE_STRCASECMP)
 check_symbol_exists(strncasecmp   "string.h"   HAVE_STRNCASECMP)
+
+# BSDs don't link against libdl, but rather libc
+check_library_exists(dl dlopen "" HAVE_LIBDL)
 
 set(CMAKE_EXTRA_INCLUDE_FILES time.h)
 check_type_size(clock_t CLOCK_T)
@@ -358,6 +362,26 @@ option(RUN_SWIG "Generate language bindings with SWIG" OFF)
 
 # Should Python bindings be built?
 option(PYTHON_BINDINGS "Build Python bindings" OFF)
+
+# Should Ruby bindings be built?
+option(RUBY_BINDINGS "Build Ruby bindings" OFF)
+
+# Should Perl bindings be built?
+option(PERL_BINDINGS "Build Perl bindings" OFF)
+
+# Should Java bindings be built?
+option(JAVA_BINDINGS "Build Java bindings" OFF)
+
+# Should CSharp bindings be built?
+option(CSHARP_BINDINGS "Build Csharp bindings" OFF)
+
+if (RUN_SWIG)
+  set(PYTHON_BINDINGS ON)
+  set(RUBY_BINDINGS ON)
+  set(PERL_BINDINGS ON)
+  set(JAVA_BINDINGS ON)
+  set(CSHARP_BINDINGS ON)
+endif (RUN_SWIG)
 
 add_subdirectory(scripts)
 
