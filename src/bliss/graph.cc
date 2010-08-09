@@ -5,9 +5,9 @@
 #include <list>
 #include <algorithm>
 #include "openbabel/bliss/defs.hh"
-#ifndef WIN32
-#include "timer.hh"
-#endif
+//#ifndef WIN32
+//#include "openbabel/bliss/timer.hh"
+//#endif
 #include "openbabel/bliss/graph.hh"
 #include "openbabel/bliss/partition.hh"
 #include "openbabel/bliss/utils.hh"
@@ -597,9 +597,9 @@ void AbstractGraph::search(const bool canonical,
 
   p.level = 0;
 
-#ifndef WIN32
-  Timer t1;
-#endif
+//#ifndef WIN32
+//  Timer t1;
+//#endif
 
   make_initial_equitable_partition();
 
@@ -609,10 +609,10 @@ void AbstractGraph::search(const bool canonical,
 
   if(verbstr && verbose_level >= 2)
     {
-#ifndef WIN32
-      fprintf(verbstr, "Initial partition computed in %.2f seconds\n",
-	      t1.get_duration());
-#endif
+//#ifndef WIN32
+//      fprintf(verbstr, "Initial partition computed in %.2f seconds\n",
+//	      t1.get_duration());
+//#endif
       fflush(verbstr);
       //p.print(verbstr); fprintf(verbstr, "\n");
       //write_dot("DEBUG.dot");

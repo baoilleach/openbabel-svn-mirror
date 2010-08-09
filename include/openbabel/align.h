@@ -38,10 +38,10 @@ namespace OpenBabel
     //OBAlign(const vector<vector3> &ref, const vector<vector3> &target, const vector<double> wts);
 
     // Partial Setup
-    void OBAlign::SetRef(const vector<vector3> &ref);
-    void OBAlign::SetTarget(const vector<vector3> &target);
-    void OBAlign::SetRefMol(const OBMol &refmol);
-    void OBAlign::SetTargetMol(const OBMol &targetmol);
+    void SetRef(const vector<vector3> &ref);
+    void SetTarget(const vector<vector3> &target);
+    void SetRefMol(const OBMol &refmol);
+    void SetTargetMol(const OBMol &targetmol);
 
     // Run the algorithm
     bool Align();
@@ -56,6 +56,8 @@ namespace OpenBabel
     bool _symmetry;
     bool _includeH;
     double _rmsd;
+    OBBitVec _frag_atoms;
+    PermutationGroup _pg;
     const OBMol* _prefmol;
     const OBMol* _ptargetmol;
     Eigen::MatrixXd _rotMatrix;
@@ -66,12 +68,17 @@ namespace OpenBabel
     vector<vector3> _targetmol_coords;
     Eigen::MatrixXd _result;
     Eigen::MatrixXd _mref, _mtarget;
-    PermutationGroup _pg;
-    OBBitVec _frag_atoms;
     void VectorsToMatrix(const vector<vector3> *pcoords, Eigen::MatrixXd &coords);
     Eigen::Vector3d MoveToOrigin(Eigen::MatrixXd &coords);
     void SimpleAlign(Eigen::MatrixXd &mtarget);
-    void OBAlign::GetAutomorphisms();
+    void GetAutomorphisms();
+    // Generate a mapping from the permutation map to the index of
+    // correct column in _mtarget. Need to handle the fact that the
+    // permutation group contains non-fragment atoms.
+    // For example, map(213465) will be converted to newidx(102354).
+    // If the atom with Idx=3 is not in the fragment, it will be
+    // converted to newidx(10X243) instead.
+    vector<unsigned int> _newidx;
   };
 }
 

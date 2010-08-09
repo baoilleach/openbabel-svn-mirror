@@ -27,7 +27,9 @@ GNU General Public License for more details.
 #include <openbabel/tree/tree.hh>
 #include <openbabel/tree/tree_util.hh>
 #include <openbabel/math/vector3.h>
-#include <vld.h>
+#ifdef _MSVC
+ #include <vld.h>
+#endif
 
 #include <float.h> // For DBL_MAX
 #include <algorithm> // For min

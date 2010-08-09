@@ -38,6 +38,7 @@ namespace OpenBabel
     _ready = false;
     _symmetry = symmetry;
     _includeH = includeH;
+    _prefmol = 0;
   }
 
   OBAlign::OBAlign(const vector<vector3> &ref, const vector<vector3> &target)
@@ -45,6 +46,7 @@ namespace OpenBabel
     SetRef(ref);
     SetTarget(target);
     _symmetry = false;
+    _prefmol = 0;
   }
 
   OBAlign::OBAlign(const OBMol &refmol, const OBMol &targetmol, bool includeH, bool symmetry) {
@@ -98,14 +100,29 @@ namespace OpenBabel
 
   void OBAlign::SetRefMol(const OBMol &refmol) {
     _prefmol = &refmol;
+
+    // Set up the BitVec for the hydrogens and store the refmol coords
+    _frag_atoms.Clear();
+    _frag_atoms.Resize(refmol.NumAtoms() + 1);
     _refmol_coords.resize(0);
-    OBAtom const *atom;
+    OBAtom const* atom;
+    int delta = 1;
+    _newidx.resize(0);
+
     for (int i=1; i<=refmol.NumAtoms(); ++i) {
       atom = refmol.GetAtom(i);
-      if (_includeH || !atom->IsHydrogen())
+      if (_includeH || !atom->IsHydrogen()) {
+        _frag_atoms.SetBitOn(i);
+        _newidx.push_back(i - delta);
         _refmol_coords.push_back(atom->GetVector());
+      }
+      else {
+        delta++;
+        _newidx.push_back(UINT_MAX);
+      }
     }
     SetRef(_refmol_coords);
+
     if (_symmetry)
       GetAutomorphisms();
   }
@@ -139,8 +156,7 @@ namespace OpenBabel
     _rotMatrix = svd.matrixV() * T * svd.matrixU().transpose();
     
     // Rotate target using rotMatrix
-    _result = mtarget.transpose() * _rotMatrix;
-    _result.transposeInPlace(); // To give 3xN matrix
+    _result = _rotMatrix.transpose() * mtarget;
 
     Eigen::MatrixXd deviation = _result - _mref;
     Eigen::MatrixXd sqr = deviation.cwise().square();
@@ -154,12 +170,6 @@ namespace OpenBabel
     // Find the automorphisms of the Reference Molecule
     OBMol workmol = *_prefmol; // OBGraphSym requires non-const OBMol
 
-    _frag_atoms.Clear();
-    _frag_atoms.Resize(workmol.NumAtoms());
-    FOR_ATOMS_OF_MOL(a, workmol)
-      if (_includeH || !a->IsHydrogen())
-        _frag_atoms.SetBitOn(a->GetIdx());
-    
     OBGraphSym gs(&workmol, &_frag_atoms);
     vector<unsigned int> sym_classes;
     gs.GetSymmetry(sym_classes, true);
@@ -185,7 +195,7 @@ namespace OpenBabel
       return false;
     }
 
-    if (!_symmetry) {
+    if (!_symmetry || _pg.permutations.size() == 1) {
       SimpleAlign(_mtarget);
     }
     else {  
@@ -200,29 +210,11 @@ namespace OpenBabel
       Eigen::MatrixXd mtarget(_mtarget.rows(), _mtarget.cols());
       
       for (cit = _pg.permutations.begin(); cit != _pg.permutations.end(); ++cit) {
-        
-        // Generate a mapping from the permutation map to the index of
-        // correct column in _mtarget. Need to handle the fact that the
-        // permutation group contains non-fragment atoms.
-        // For example, map(213465) will be converted to newidx(102354).
-        // If the atom with Idx=3 is not in the fragment, it should be
-        // converted to newidx(10X243) instead.
-        vector<unsigned int> newidx;
-        int delta = 1;
-        for (int j=1; j<=_prefmol->NumAtoms(); ++j) {
-          if (!_frag_atoms.BitIsSet(j)) {
-            delta += 1;
-            newidx.push_back(UINT_MAX);
-          }
-          else
-            newidx.push_back(j - delta);
-        }
-        
         // Rearrange columns of _mtarget for this permutation
         int i=0;
         for (int j=1; j<=_prefmol->NumAtoms(); ++j) {
           if (_frag_atoms.BitIsSet(j)) {
-            mtarget.col(i) = _mtarget.col(newidx.at(cit->map.at(j - 1) - 1));
+            mtarget.col(i) = _mtarget.col(_newidx[cit->map[j - 1] - 1]);
             i++;
           }
         }
