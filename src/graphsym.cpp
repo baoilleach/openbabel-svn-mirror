@@ -94,6 +94,7 @@ namespace OpenBabel {
   // Destructor
   OBGraphSym::~OBGraphSym()
   {
+    delete d;
     // Nothing to do
   }
 
