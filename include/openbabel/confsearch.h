@@ -2,7 +2,7 @@
 #define OB_CONFSEARCH_H
 
 #include <openbabel/tree/tree.hh>
-#include <openbabel/align.h>
+#include <openbabel/math/align.h>
 //#include <vld.h>
 
 namespace OpenBabel

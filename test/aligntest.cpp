@@ -1,6 +1,6 @@
 #include "obtest.h"
 #include <openbabel/obconversion.h>
-#include <openbabel/align.h>
+#include <openbabel/math/align.h>
 #include <openbabel/math/matrix3x3.h>
 #include <openbabel/builder.h>
 

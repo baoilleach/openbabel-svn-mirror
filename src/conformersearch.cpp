@@ -1,5 +1,5 @@
 #include <openbabel/conformersearch.h>
-#include <openbabel/align.h>
+#include <openbabel/math/align.h>
 #include <openbabel/forcefield.h>
 
 

@@ -23,7 +23,7 @@ GNU General Public License for more details.
 #include <openbabel/rotamer.h>
 #include <openbabel/rotor.h>
 #include <openbabel/confsearch.h>
-#include <openbabel/align.h>
+#include <openbabel/math/align.h>
 #include <openbabel/tree/tree.hh>
 #include <openbabel/tree/tree_util.hh>
 #include <openbabel/math/vector3.h>
@@ -133,7 +133,7 @@ namespace OpenBabel
 
     natoms = ref.NumAtoms();
     palign->SetRefMol(ref);
-    cout << "Numatoms" << palign->NumAutos() << endl;
+    //cout << "Numatoms" << palign->NumAutos() << endl;
     n_rmsd = 0;
 
     static const double arr[] = {3.0, 2.0, 1.5, 1.0, 0.5, 0.25};
@@ -540,7 +540,7 @@ vector<double> NewUpdateConformers(OBMol* mol, OBDiversePosesB* divposes) {
     
   // Loop through the confs and filter using a tree
   newconfs.clear();
-  OBDiversePosesB* newtree = new OBDiversePosesB(*mol, cutoff, true);
+  OBDiversePosesB* newtree = new OBDiversePosesB(*mol, cutoff, false);
   for (vpp::iterator conf = confs.begin(); conf!=confs.end(); ++conf) {
     if (newtree->AddPose(conf->first, conf->second)) {
       newconfs.push_back(*conf);
@@ -618,6 +618,7 @@ int OBForceField::DiverseConfGen(double rmsd, int nconfs, double energy_gap)
       rotorKeys.AddRotor(rotor->GetResolution().size());
       combinations *= rotor->GetResolution().size();
     }
+    cout << "Tot combinations = " << combinations << "\n";
 
     // Main loop over rotamers
     OBDiversePosesB divposes(_mol, rmsd, false);
@@ -633,8 +634,7 @@ int OBForceField::DiverseConfGen(double rmsd, int nconfs, double energy_gap)
           lowest_energy = currentE;
       }
     } while (rotorKeys.Next());
-    cout << "Tot combinations = " << combinations << "\n";
-
+    
     if (nconfs != 1 && nconfs != 2) { // Get results from tree
       _energies = NewUpdateConformers(&_mol, &divposes);
     }

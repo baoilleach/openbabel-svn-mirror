@@ -51,7 +51,7 @@ set(math_srcs
 if (EIGEN2_FOUND)
 set(math_srcs
         ${math_srcs}
-        align.cpp
+        math/align.cpp
 )
 endif (EIGEN2_FOUND)
 
