@@ -34,7 +34,7 @@ GNU General Public License for more details.
 #include <float.h> // For DBL_MAX
 #include <algorithm> // For min
 
-#include <assert.h>
+#include <iomanip> // For setprecision
 
 namespace OpenBabel
 {
@@ -563,13 +563,23 @@ int OBForceField::DiverseConfGen(double rmsd, int nconfs, double energy_gap)
     }
     cout << "Tot combinations = " << combinations << "\n";
 
-    // Main loop over rotamers
-    LFSR lfsr(combinations); // Systematic random number generator
+    unsigned int conf_cutoff = 1 << 20;
+    unsigned int max_combinations = min<unsigned int>(conf_cutoff , combinations);
+    LFSR lfsr(max_combinations); // Systematic random number generator
+    if (combinations > max_combinations) {
+      ostringstream ss;
+      ss << "There are " << combinations << " conformers. Using a cutoff of "
+        << conf_cutoff << " we will only explore " << std::fixed << setprecision(1)
+        << static_cast<float>(conf_cutoff * 100)/static_cast<float>(combinations) << "% of these.";
+      obErrorLog.ThrowError(__FUNCTION__, ss.str(), obWarning);
+    }
+
     unsigned int combination;
     OBDiversePosesB divposes(_mol, rmsd, false);
     vector<int> my_rotorkey(rotor_sizes.size() + 1, 0);
     int counter = 0;
-    ofstream out("noeltmp.txt");
+
+    // Main loop over rotamers
     do {
       _mol.SetCoordinates(store_initial);
 
@@ -580,8 +590,7 @@ int OBForceField::DiverseConfGen(double rmsd, int nconfs, double energy_gap)
         my_rotorkey[i + 1] = t % rotor_sizes[i];
         t /= rotor_sizes[i];
       }
-      out << counter << " " << my_rotorkey << endl;
-
+      
       rotamerlist.SetCurrentCoordinates(_mol, my_rotorkey);
       SetupPointers();
       double currentE = E_VDW(false) + E_Torsion(false) + E_Electrostatic(false);
@@ -592,7 +601,7 @@ int OBForceField::DiverseConfGen(double rmsd, int nconfs, double energy_gap)
           lowest_energy = currentE;
       }
       counter++;
-    } while (combination != 1); // The LFSR always terminates with a 1
+    } while (combination != 1 && counter < conf_cutoff); // The LFSR always terminates with a 1
     
     if (nconfs != 1 && nconfs != 2) { // Get results from tree
       _energies = NewUpdateConformers(&_mol, &divposes);
