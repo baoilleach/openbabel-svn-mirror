@@ -49,7 +49,7 @@ namespace OpenBabel
 
     int i = 0;
     unsigned int tot = 4;
-    while (_tot <= _range) {
+    while (tot <= _range) {
       i++;
       tot <<= 1;
     }
@@ -554,17 +554,35 @@ int OBForceField::DiverseConfGen(double rmsd, int nconfs, double energy_gap)
     OBRotorKeys rotorKeys;
     OBRotor* rotor = rl.BeginRotor(ri);
     unsigned long int combinations = 1;
+    vector<size_t> rotor_sizes;
     for (int i = 1; i < rl.Size() + 1; ++i, rotor = rl.NextRotor(ri)) { // foreach rotor
-      rotorKeys.AddRotor(rotor->GetResolution().size());
-      combinations *= rotor->GetResolution().size();
+      size_t size = rotor->GetResolution().size();
+      rotorKeys.AddRotor(size);
+      combinations *= size;
+      rotor_sizes.push_back(size);
     }
     cout << "Tot combinations = " << combinations << "\n";
 
     // Main loop over rotamers
+    LFSR lfsr(combinations); // Systematic random number generator
+    unsigned int combination;
     OBDiversePosesB divposes(_mol, rmsd, false);
+    vector<int> my_rotorkey(rotor_sizes.size() + 1, 0);
+    int counter = 0;
+    ofstream out("noeltmp.txt");
     do {
       _mol.SetCoordinates(store_initial);
-      rotamerlist.SetCurrentCoordinates(_mol, rotorKeys.GetKey());
+
+      combination = lfsr.GetNext();
+      unsigned int t = combination;
+      // Convert the combination number into a rotorkey
+      for (int i = 0 ; i < rotor_sizes.size(); ++i) {
+        my_rotorkey[i + 1] = t % rotor_sizes[i];
+        t /= rotor_sizes[i];
+      }
+      out << counter << " " << my_rotorkey << endl;
+
+      rotamerlist.SetCurrentCoordinates(_mol, my_rotorkey);
       SetupPointers();
       double currentE = E_VDW(false) + E_Torsion(false) + E_Electrostatic(false);
       if (currentE < lowest_energy + energy_gap) { // Don't retain high energy poses
@@ -573,7 +591,8 @@ int OBForceField::DiverseConfGen(double rmsd, int nconfs, double energy_gap)
         if (currentE < lowest_energy)
           lowest_energy = currentE;
       }
-    } while (rotorKeys.Next());
+      counter++;
+    } while (combination != 1); // The LFSR always terminates with a 1
     
     if (nconfs != 1 && nconfs != 2) { // Get results from tree
       _energies = NewUpdateConformers(&_mol, &divposes);
