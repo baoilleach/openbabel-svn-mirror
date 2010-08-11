@@ -9,25 +9,23 @@ namespace OpenBabel
 {
   class OBMol;
 
-  class OBAPI OBDiversePoses {
-    public:
-      OBDiversePoses(double RMSD);
-      bool AddPose(const OBMol &mol);
-      typedef tree<OBMol> Tree;
-      typedef tree<OBMol>::iterator Tree_it;
-      typedef tree<OBMol>::sibling_iterator Tree_sit;
-      size_t GetSize();
-      inline int GetNRMSD() {
-        return n_rmsd;
-      }
-      
-    private:
-      Tree poses;
-      std::vector<double> levels;
-      OBAlign align;
-      double cutoff;
-      int n_rmsd;
-    };
+  class OBAPI LFSR
+  {
+    /**
+     * Usage:
+     *     LFSR lfsr(N); // where N < 2^31
+     *     unsigned int d;
+     *     do {
+     *       d = lfsr.GetNext();
+     *     } while (d != 1);
+     **/
+  public:
+    LFSR::LFSR(unsigned int range);
+    unsigned int GetNext(); // Return 0 when finished
+  private:
+    unsigned int _range, _lfsr, _poly;
+    static const unsigned int _polynomials[31];
+  };
 
   class OBAPI OBDiversePosesB {
     public:

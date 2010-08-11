@@ -34,97 +34,37 @@ GNU General Public License for more details.
 #include <float.h> // For DBL_MAX
 #include <algorithm> // For min
 
+#include <assert.h>
+
 namespace OpenBabel
 {
+  const unsigned int LFSR::_polynomials[31] = {0x3, 0x6, 0xc, 0x14, 0x30, 0x60, 0xb8, 0x110, 0x240, 0x500,
+       0x829, 0x100d, 0x2015, 0x6000, 0xd008, 0x12000, 0x20400, 0x40023, 0x90000, 0x140000,
+       0x300000, 0x420000, 0xe10000, 0x1200000, 0x2000023, 0x4000013, 0x9000000, 0x14000000,
+       0x20000029, 0x48000000, 0x80200003};
 
+  LFSR::LFSR(unsigned int range): _range(range), _lfsr(1)
+  {
+    assert ( _range < (1 << 31) ); // We can only handle up to 2^31 - 1
 
-  ostream& operator<<( ostream &out, OBMol &mol_b) {
-    if (mol_b.NumAtoms() == 0)
-      out << "Root";
-    else
-      out << mol_b.GetTorsion(mol_b.GetAtom(1), mol_b.GetAtom(2), mol_b.GetAtom(3), mol_b.GetAtom(4));
-    return out;
+    int i = 0;
+    unsigned int tot = 4;
+    while (_tot <= _range) {
+      i++;
+      tot <<= 1;
+    }
+    _poly = _polynomials[i];
   }
 
-  OBDiversePoses::OBDiversePoses(double RMSD) {
-    n_rmsd = 0;
-    cutoff = RMSD;
-
-    static const double arr[] = {3.0, 2.0, 1.5, 1.0, 0.5, 0.25};
-    std::vector<double> vec (arr, arr + sizeof(arr) / sizeof(arr[0]) );
-    vec.erase(std::remove_if(vec.begin(), vec.end(), std::bind2nd(std::less<double>(), (cutoff + 0.1) )), vec.end());
-    vec.push_back(cutoff);
-
-    levels = vec;
-
-    poses.insert(poses.begin(), OBMol()); // Add a dummy top node
+  inline unsigned int LFSR::GetNext()
+  {
+    do {
+      _lfsr = (_lfsr >> 1) ^ (unsigned int)(0 - (_lfsr & 1u) & _poly);
+    } while (_lfsr > _range);
+   
+    return _lfsr;
   }
 
-  bool OBDiversePoses::AddPose(const OBMol &mol) {
-    OBMol cmol = mol; // Store a copy of the molecule in the tree
-
-    Tree_it node = poses.begin();
-    int level = 0;
-    bool first_time = true;
-    align.SetRefMol(mol);
-
-    while(true) {
-
-      // Find whether the molecule is similar to any of the children of this node.
-      // - min_node will hold the result of this search
-      
-      Tree_it min_node = poses.end(); // Point it at the end iterator (will test its value later)
-      double rmsd;
-
-      Tree_sit sib = poses.begin(node);
-      // Skip the first child after the first time through this loop
-      // - it will already have been tested against at the end of the previous loop
-      if (!first_time)
-        ++sib;
-      for (; sib != poses.end(node); ++sib) { // Iterate over children of node
-        align.SetTargetMol(*sib);
-        align.Align();
-        rmsd = align.GetRMSD();
-        n_rmsd++;
-        if (rmsd < levels.at(level)) {
-          if (rmsd < cutoff)
-            return false;
-          min_node = sib;
-          break; // Exit as soon as one is found
-        }
-      } // end of for loop
-
-      if (min_node == poses.end()) {
-        // No similar molecule found, so append it the children
-        // and add it as the first child all the way down through the levels
-        
-        for(int k = level; k < levels.size(); ++k) {
-          node = poses.append_child(node, cmol);
-        }
-        //kptree::print_tree_bracketed(poses);
-        return true;
-      }
-
-      // If we reach here, then a similar molecule was found
-      node = min_node;
-      level++;
-      while (rmsd < levels.at(level)) {
-        node = poses.child(node, 0); // Get the first child
-        level++;
-      }
-
-      first_time = false;
-
-    } // end of while loop
-
-    return true;
-  }
-
-  size_t OBDiversePoses::GetSize() {
-    return poses.size() - 1; // Remove the dummy
-  }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
 
   OBDiversePosesB::OBDiversePosesB(const OBMol &ref, double RMSD, bool percise):
           palign(new OBAlign(false, percise)), cutoff(RMSD)
