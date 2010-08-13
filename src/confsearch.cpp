@@ -43,9 +43,10 @@ namespace OpenBabel
        0x300000, 0x420000, 0xe10000, 0x1200000, 0x2000023, 0x4000013, 0x9000000, 0x14000000,
        0x20000029, 0x48000000, 0x80200003};
 
-  LFSR::LFSR(unsigned int range): _range(range), _lfsr(1)
+  LFSR::LFSR(unsigned int range, unsigned int start = 1): _range(range), _lfsr(start)
   {
     assert ( _range < (1 << 31) ); // We can only handle up to 2^31 - 1
+    assert ( _start < _range ); // Otherwise the _start value will never be returned
 
     int i = 0;
     unsigned int tot = 4;
@@ -73,7 +74,6 @@ namespace OpenBabel
 
     natoms = ref.NumAtoms();
     palign->SetRefMol(ref);
-    //cout << "Numatoms" << palign->NumAutos() << endl;
     n_rmsd = 0;
 
     static const double arr[] = {3.0, 2.0, 1.5, 1.0, 0.5, 0.25};
@@ -202,11 +202,6 @@ namespace OpenBabel
         node = poses.append_child(node, *b);
       }
     }
-    
-    //for(int k = level; k < levels.size(); ++k) {
-    //  node = poses.append_child(node, PosePair(vcoords, energy));
-    //}
-
 
     return true;
   }
@@ -230,65 +225,6 @@ namespace OpenBabel
     return (a.second < b.second);
   }
 
-/*
-  vector<double> OBDiversePosesB::UpdateConformers(OBMol &mol) {
-
-    // Initialise a vector of pointers to the nodes of the tree
-    vector <PosePair*> confs;
-    // The leaf iterator will (in effect) iterate over the nodes just at the loweset level
-    for (Tree::leaf_iterator node = poses.begin(); node != poses.end(); ++node)
-      if (node->first.size() > 0) // Don't include the dummy head node
-        confs.push_back(&*(node));
-
-    // Sort the confs by energy (lowest first)
-    sort(confs.begin(), confs.end(), sortpred);
-
-    // For the moment, store the results in a vector
-    typedef vector<PosePair*> vpp;
-    vpp chosen_confs;
-    
-    // Loop through the confs and chose a diverse bunch
-    for (vpp::iterator conf = confs.begin(); conf!=confs.end(); ++conf) {
-      vector<vector3> ref_hvy_coords = GetHeavyAtomCoords( (*conf)->first );
-      align.SetRef(ref_hvy_coords);
-
-      bool keepconf = true;
-      for (vpp::iterator chosen = chosen_confs.begin(); chosen!=chosen_confs.end(); ++chosen) {
-        vector<vector3> target_hvy_coords = GetHeavyAtomCoords( (*chosen)->first );
-        align.SetTarget(target_hvy_coords);
-        align.Align();
-        double rmsd = align.GetRMSD();
-        if (rmsd < cutoff) {
-          keepconf = false;
-          break;
-        }
-      }
-      if (keepconf)
-        chosen_confs.push_back(*conf);
-    }
-
-    cout << "Tree size " << GetSize() << " Confs = " << confs.size() << " Chosen confs = " << chosen_confs.size() << endl;
-
-    // Add confs to the molecule's conformer data and return the energies (these will be added by the calling function)
-    vector<double> energies;
-    for (vpp::iterator chosen = chosen_confs.begin(); chosen!=chosen_confs.end(); ++chosen) {
-      energies.push_back((*chosen)->second);
-      
-      // To avoid making copies of vectors or vector3s, I am using pointers throughout
-      vector<vector3> *tmp = &((*chosen)->first);
-      double *confCoord = new double [natoms * 3];
-      for(unsigned int a = 0; a<natoms; ++a) {
-        vector3* pv3 = &(*tmp)[a];
-        confCoord[a*3] = pv3->x();
-        confCoord[a*3 + 1] = pv3->y();
-        confCoord[a*3 + 2] = pv3->z();
-      }
-      mol.AddConformer(confCoord);
-    }
-
-    return energies;
-  }
-*/
   int OBForceField::FastRotorSearch(bool permute)
   {
     if (_mol.NumRotors() == 0)

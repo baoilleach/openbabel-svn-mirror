@@ -17,10 +17,11 @@ namespace OpenBabel
      *     unsigned int d;
      *     do {
      *       d = lfsr.GetNext();
+     *       // .... do something with d ...
      *     } while (d != 1);
      **/
   public:
-    LFSR::LFSR(unsigned int range);
+    LFSR::LFSR(unsigned int range, unsigned int start);
     unsigned int GetNext(); // Return 0 when finished
   private:
     unsigned int _range, _lfsr, _poly;
