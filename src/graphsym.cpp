@@ -95,7 +95,6 @@ namespace OpenBabel {
   OBGraphSym::~OBGraphSym()
   {
     delete d;
-    // Nothing to do
   }
 
   const unsigned int OBGraphSym::NoSymmetryClass = 0x7FFFFFFF;

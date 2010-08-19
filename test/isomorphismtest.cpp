@@ -43,18 +43,59 @@ void testIsomorphism1()
 
 void testIsomorphism2()
 {
+  cout << "testIsomorphism2" << endl;
   OBMol mol;
   OBConversion conv;
   conv.SetInFormat("smi");
   conv.ReadString(&mol, "Cc1ccc(C)cc1");
 
-  OBQuery *query = CompileSmilesQuery("C1=CC=CC=C1");
+  OBQuery *query = CompileSmilesQuery("c1ccccc1");
   OBIsomorphismMapper *mapper = OBIsomorphismMapper::GetInstance(query);
   OBIsomorphismMapper::Mappings maps = mapper->MapUnique(&mol);
 
   cout << maps.size() << endl;
 
   OB_ASSERT( maps.size() == 1 );
+
+  delete query;
+  delete mapper;
+}
+
+void testIsomorphism3()
+{
+  cout << "testIsomorphism3" << endl;
+  OBMol mol;
+  OBConversion conv;
+  conv.SetInFormat("smi");
+  conv.ReadString(&mol, "C1CC1CC1CC1");
+
+  OBQuery *query = CompileSmilesQuery("C1CC1");
+  OBIsomorphismMapper *mapper = OBIsomorphismMapper::GetInstance(query);
+  OBIsomorphismMapper::Mappings maps = mapper->MapUnique(&mol);
+
+  cout << maps.size() << endl;
+
+  OB_ASSERT( maps.size() == 2 );
+
+  delete query;
+  delete mapper;
+}
+
+void testIsomorphism4()
+{
+  cout << "testIsomorphism4" << endl;
+  OBMol mol;
+  OBConversion conv;
+  conv.SetInFormat("smi");
+  conv.ReadString(&mol, "C12C(C2)C1");
+
+  OBQuery *query = CompileSmilesQuery("C1CC1");
+  OBIsomorphismMapper *mapper = OBIsomorphismMapper::GetInstance(query);
+  OBIsomorphismMapper::Mappings maps = mapper->MapUnique(&mol);
+
+  cout << maps.size() << endl;
+
+  OB_ASSERT( maps.size() == 2 );
 
   delete query;
   delete mapper;
@@ -146,6 +187,12 @@ void testAutomorphismMask() {
   mask.SetBitOff(6+1);
   maps = FindAutomorphisms(&mol, mask);
   cout << maps.size() << endl;
+  for (unsigned int i = 0; i < maps.size(); ++i) {
+    OBIsomorphismMapper::Mapping::const_iterator j;
+    for (j = maps[i].begin(); j != maps[i].end(); ++j)
+      cout << j->second << " ";
+    cout << endl;
+  }
   OB_ASSERT( maps.size() == 8 );
 
   // Verify that atom Id 6 does not occur anywhere in the mappings
@@ -156,6 +203,43 @@ void testAutomorphismMask() {
       OB_ASSERT( b->first != 6 );
       OB_ASSERT( b->second != 6 );
     }
+}
+
+void testAutomorphismMask2()
+{
+  // The test molecule is progesterone, a steroid (four fused non-planar rings)
+  cout <<  "testAutomorphismMask2" << endl;
+  OBMol mol;
+  OBConversion conv;
+
+  conv.SetInFormat("sdf");
+  std::ifstream ifs(GetFilename("progesterone.sdf").c_str());
+  OB_REQUIRE( ifs );
+  OB_REQUIRE( conv.Read(&mol, &ifs) );
+  
+  vector<map<unsigned int, unsigned int> > _aut;
+  OBBitVec _frag_atoms;
+  FOR_ATOMS_OF_MOL(a, mol) {
+    if(!(a->IsHydrogen()))
+      _frag_atoms.SetBitOn(a->GetIdx());
+  }
+  _aut = FindAutomorphisms((OBMol*)&mol, _frag_atoms);
+  OB_ASSERT( _aut.size() == 1 );
+
+}
+
+void testAutomorphismPreMapping()
+{
+  cout <<  "testAutomorphismPreMapping" << endl;
+  OBMol mol;
+  OBConversion conv;
+  conv.SetInFormat("smi");
+  conv.ReadString(&mol, "c1(C)c(C)c(C)c(C)c(C)c1");
+
+  vector<map<unsigned int, unsigned int> > aut;
+  aut = FindAutomorphisms((OBMol*)&mol);
+  cout << aut.size() << endl;
+  OB_ASSERT( aut.size() == 2 );
 }
 
 int main() 
@@ -169,8 +253,12 @@ int main()
 
   testIsomorphism1();
   testIsomorphism2();
+  testIsomorphism3();
+  testIsomorphism4();
   testIsomorphismMask();
-  testAutomorphismMask(); 
+  testAutomorphismMask();
+  testAutomorphismMask2(); 
+  testAutomorphismPreMapping();
 
   return 0;
 }

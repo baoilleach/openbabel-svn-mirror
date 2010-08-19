@@ -11,6 +11,7 @@ add_definitions(-DFORMATDIR="\\"${openbabel_BINARY_DIR}/lib/\\"")
 set(tests
     automorphism
     builder
+    canonconsistent
     cistrans
     confsearch
     divposes
@@ -18,8 +19,8 @@ set(tests
     graphsym
     lssr
     isomorphism
+    rotor
     smiles
-    sdfcansmi
     spectrophore
     squareplanar
     stereo
