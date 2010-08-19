@@ -211,10 +211,10 @@ namespace OpenBabel
 
         bond1 = bond1.normalize();
         if (bond2 == VZero) {
+          vector3 vrand;
+          vrand.randomUnitVector();
           // there is no a-2 atom
-          v1 = cross(bond1, VY);
-          if (v1 == VZero) // This corner-case happened to me, where bond1 was -VY (Noel)
-            v1 = cross(bond1, VX);
+          v1 = cross(bond1, vrand);
           v2 = cross(bond1, v1);
         } else {
           v1 = cross(bond1, bond2);
@@ -270,9 +270,9 @@ namespace OpenBabel
           /* add the first equatorial atom, orthogonally to bond1 (and bond2 = -bond1) */
           /* is atom order correct?  I don't think it matters, but I might have to ask a chemist
            * whether PClF4 would be more likely to have an equatorial or axial Cl-P bond */
-          v1 = cross(bond1, VY);
-          if (v1 == VZero) // This corner-case happened to me, where bond1 was -VY (Noel)
-            v1 = cross(bond1, VX);
+          vector3 vrand;
+          vrand.randomUnitVector();
+          v1 = cross(bond1, vrand);
           v1 = v1.normalize();
           newbond = v1;
         }
@@ -857,20 +857,34 @@ namespace OpenBabel
     if (workMol.GetDimension() == 2)
       workMol.SetDimension(0);
 
-    // How many ring atoms are there?
+    // Count the number of ring atoms.
     int ratoms = 0;
     FOR_ATOMS_OF_MOL(a, mol)
-      if (a->IsInRing())
+      if (a->IsInRing()) {
         ratoms++;
+        if (_keeprings) // Mark these as fragments
+          vfrag.SetBitOn(a->GetIdx());
+      }
     
-    // delete all bonds in the working molecule
-    // we will add them back at the end
-    while (workMol.NumBonds())
-      workMol.DeleteBond(workMol.GetBond(0));
+    if (_keeprings) {
+      // Delete all non-ring bonds
+      std::vector<OBBond*> for_deletion;
+      FOR_BONDS_OF_MOL(b, workMol)
+        if (!b->IsInRing())
+          for_deletion.push_back(&(*b));
+      for(std::vector<OBBond*>::iterator it=for_deletion.begin(); it!=for_deletion.end(); ++it) {
+        workMol.DeleteBond(*it);
+      }
+    }
+    else
+      // Delete all bonds in the working molecule
+      // (we will add them back at the end)
+      while (workMol.NumBonds())
+        workMol.DeleteBond(workMol.GetBond(0));
     
     workMol.SetHybridizationPerceived();
-    
-    if (ratoms) {
+
+    if (ratoms && !_keeprings) {
       //datafile is read only on first use of Build()
       if(_fragments.empty())
         LoadFragments();
