@@ -472,14 +472,7 @@ void UpdateConformersFromTree(OBMol* mol, vector<double> &energies, OBDiversePos
 
 int OBForceField::DiverseConfGen(double rmsd, unsigned int nconfs, double energy_gap)
   {
-    if (_mol.NumRotors() == 0)
-      return 0;
-  
-    // Get estimate of lowest energy conf using FastRotorSearch
-    FastRotorSearch(true);
-    double lowest_energy = Energy();
-
-    int origLogLevel = _loglvl;
+    _energies.clear(); // Wipe any energies from previous conformer generators
 
     // Remove all conformers (e.g. from previous conformer generators) even the current conformer
     double *initialCoord = new double [_mol.NumAtoms() * 3]; // initial state
@@ -488,8 +481,18 @@ int OBForceField::DiverseConfGen(double rmsd, unsigned int nconfs, double energy
     memcpy((char*)store_initial,(char*)_mol.GetCoordinates(),sizeof(double)*3*_mol.NumAtoms());
     std::vector<double *> newConfs(1, initialCoord);
     _mol.SetConformers(newConfs);
-    
-    _energies.clear(); // Wipe any energies from previous conformer generators
+
+    if (_mol.NumRotors() == 0) {
+      SetupPointers();
+      _energies.push_back(Energy());
+      return 0;
+    }
+  
+    // Get estimate of lowest energy conf using FastRotorSearch
+    FastRotorSearch(true);
+    double lowest_energy = Energy();
+
+    int origLogLevel = _loglvl;
 
     OBRotorList rl;
     OBBitVec fixed = _constraints.GetFixedBitVec();
@@ -562,10 +565,9 @@ int OBForceField::DiverseConfGen(double rmsd, unsigned int nconfs, double energy
     } while (combination != 1 && counter < nconfs); // The LFSR always terminates with a 1
     cout << "..tot confs tested = " << counter << "\n..below energy threshold = " << N_low_energy << "\n";
     
-    if (nconfs != 1 && nconfs != 2) { // Get results from tree
-      UpdateConformersFromTree(&_mol, _energies, &divposes);
-    }
-
+    // Get results from the tree
+    UpdateConformersFromTree(&_mol, _energies, &divposes);
+    
     // Add back the energy offset
     transform(_energies.begin(), _energies.end(), _energies.begin(), bind2nd(plus<double>(), energy_offset));
 
