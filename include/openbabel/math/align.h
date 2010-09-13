@@ -143,7 +143,7 @@ namespace OpenBabel
     //@}
 
   private:
-    bool _ready;
+    bool _ready, _fail;
     bool _symmetry;
     bool _includeH;
     double _rmsd;
@@ -163,6 +163,7 @@ namespace OpenBabel
     void VectorsToMatrix(const vector<vector3> *pcoords, Eigen::MatrixXd &coords);
     Eigen::Vector3d MoveToOrigin(Eigen::MatrixXd &coords);
     void SimpleAlign(const Eigen::MatrixXd &mtarget);
+    void TheobaldAlign(const Eigen::MatrixXd &mtarget);
     // Generate a mapping from the permutation map to the index of
     // correct column in _mtarget. Need to handle the fact that the
     // permutation group contains non-fragment atoms.
