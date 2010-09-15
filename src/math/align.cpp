@@ -136,6 +136,10 @@ namespace OpenBabel
     SetTarget(_targetmol_coords);
   }
 
+  void OBAlign::SetMethod(OBAlign::AlignMethod method) {
+    _method = method;
+  }
+
 /* Evaluates the Newton-Raphson correction for the Horn quartic.
    only 11 FLOPs */
   static double eval_horn_NR_corrxn(const vector<double> &c, const double x)
@@ -177,17 +181,16 @@ namespace OpenBabel
                     SxzpSzx, SyzpSzy, SxypSyx, SyzmSzy,
                     SxzmSzx, SxymSyx, SxxpSyy, SxxmSyy;
 
-    //Eigen::Matrix3d M = mtarget * _mref.transpose();
     Eigen::Matrix3d M_sqr = M.cwise().square();
 
     Sxx = M(0, 0);
-    Sxy = M(0, 1);
-    Sxz = M(0, 2);
-    Syx = M(1, 0);
+    Sxy = M(1, 0);
+    Sxz = M(2, 0);
+    Syx = M(0, 1);
     Syy = M(1, 1);
-    Syz = M(1, 2);
-    Szx = M(2, 0);
-    Szy = M(2, 1);
+    Syz = M(2, 1);
+    Szx = M(0, 2);
+    Szy = M(1, 2);
     Szz = M(2, 2);
 
     Sxx2 = Sxx * Sxx;
@@ -237,14 +240,16 @@ namespace OpenBabel
     Eigen::Matrix3d M = mtarget * _mref.transpose();
 
     // Maximum value for lambda is (Ga + Gb) / 2
-    double innerprod = (mtarget.squaredNorm() + _mref.squaredNorm() ) / 2.0;
+    double innerprod = mtarget.squaredNorm() + _mref.squaredNorm();
 
     vector<double> coeffs = CalcQuarticCoeffs(M);
     double lambdamax = QCProot(coeffs, 0.5 * innerprod, 1e-6);
     if (lambdamax > (0.5 * innerprod))
       _fail = true;
-    else
-      _rmsd = innerprod - (2.0 * lambdamax);
+    else {
+      double sqrdev = innerprod - (2.0 * lambdamax);
+      _rmsd = sqrt(sqrdev / mtarget.cols());
+    }
   }
 
   void OBAlign::SimpleAlign(const Eigen::MatrixXd &mtarget)
@@ -269,7 +274,7 @@ namespace OpenBabel
     Eigen::MatrixXd deviation = _result - _mref;
     Eigen::MatrixXd sqr = deviation.cwise().square();
     double sum = sqr.sum();
-    _rmsd = sqrt( sum / sqr.size() );
+    _rmsd = sqrt( sum / sqr.cols() );
 
   }
 
@@ -283,7 +288,10 @@ namespace OpenBabel
     }
 
     if (!_symmetry || _aut.size() == 1) {
-      SimpleAlign(_mtarget);
+      if (_method == OBAlign::Kabsch)
+        SimpleAlign(_mtarget);
+      else
+        TheobaldAlign(_mtarget);
     }
     else {  // Iterate over the automorphisms
    
@@ -304,8 +312,10 @@ namespace OpenBabel
             i++;
           }
         }
-
-        SimpleAlign(mtarget);
+        if (_method == OBAlign::Kabsch)
+          SimpleAlign(mtarget);
+        else
+          TheobaldAlign(mtarget);
         if (_rmsd < min_rmsd) {
           min_rmsd = _rmsd;
           result = _result;

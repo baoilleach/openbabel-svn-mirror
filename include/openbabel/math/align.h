@@ -116,6 +116,13 @@ namespace OpenBabel
      * Align the Target to the Reference using a least-squares alignment.
      */
     bool Align();
+    
+    enum AlignMethod {
+      Kabsch = 0,   // Returns matrix and RMSD
+      QCP    = 1    // Returns just RMSD (fast)
+    };
+
+    void SetMethod(enum AlignMethod method);
     //@}
 
     ///@name Access the result of the alignment
@@ -146,6 +153,7 @@ namespace OpenBabel
     bool _ready, _fail;
     bool _symmetry;
     bool _includeH;
+    enum AlignMethod _method;
     double _rmsd;
     OBBitVec _frag_atoms;
     // OBIsomorphismMapper::Mappings _aut;

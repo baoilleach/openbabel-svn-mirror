@@ -123,6 +123,7 @@ namespace OpenBabel
   {
     natoms = ref.NumAtoms();
     palign->SetRefMol(ref);
+    palign->SetMethod(OBAlign::QCP);
     n_rmsd = 0;
 
     const double arr[] = {3.0, 2.0, 1.5, 1.0, 0.5, 0.25};  
