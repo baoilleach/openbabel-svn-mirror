@@ -52,6 +52,7 @@ if (EIGEN2_FOUND)
 set(math_srcs
         ${math_srcs}
         math/align.cpp
+        math/fastalign.cpp
 )
 endif (EIGEN2_FOUND)
 

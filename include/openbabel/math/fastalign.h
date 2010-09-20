@@ -1,0 +1,187 @@
+/**********************************************************************
+fastalign.h - Align two molecules or vectors of vector3
+ 
+Copyright (C) 2010 by Noel M. O'Boyle
+ 
+This file is part of the Open Babel project.
+For more information, see <http://openbabel.sourceforge.net/>
+ 
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation version 2 of the License.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+***********************************************************************/
+
+#ifndef OB_FASTALIGN_H
+#define OB_FASTALIGN_H
+
+#include <openbabel/mol.h>
+#include <openbabel/math/vector3.h>
+#include <openbabel/math/matrix3x3.h>
+#include <openbabel/isomorphism.h>
+#include <Eigen/Core>
+
+using namespace std;
+
+namespace OpenBabel
+{
+  /**
+   * \brief Perform a least-squares alignment of two molecules or two vectors of vector3 objects
+   *
+   * This class may be used to perform a least-squares alignment of two OBMol
+   * objects or two vector<vector3> objects. The Kabsch algorithm is used
+   * for the alignment.
+   *
+   * During the alignment, the Target is aligned to the Reference. Note that
+   * mutiple alignments to the same Reference will be much faster than multiple
+   * alignments to the same Target. When carrying out multiple alignments,
+   * a single OBFastAlign instance should be reused by calling
+   * SetTarget() or SetTargetMol() for each additional Target and then calling
+   * Align().
+   *
+   * When aligning molecules, the atoms of the two molecules must be in the same
+   * order for the results to be sensible. By default, hydrogens are not
+   * included in the least-squares fitting procedure (set @p includeH to 
+   * true if you wish to include them) and so the resulting RMSD is the
+   * heavy-atom RMSD (which is usually what you want). 
+   *
+   * By default, symmetry is taken
+   * into account when comparing molecules. For example, if a benzene is flipped
+   * by 180 degrees along one of its 2-fold symmetry axes, it will only have an
+   * RMSD of 0 (with respect to its original orientation) if symmetry is
+   * enabled. To turn off handling of symmetry set @p symmetry to false (this
+   * will speed up the alignment).
+   *
+   * Note that neither the Target nor the Reference
+   * are modified by the algorithm. As a result, to update a TargetMol with the
+   * new coordinates from the alignment, you need to use UpdateCoords().
+   *
+   * @since version 2.3
+   */ 
+  class OBAPI OBFastAlign {
+  public: 
+    ///@name Constructors
+    //@{
+    /**
+     * If this constructor is used, the Target and Reference must be 
+     * set using SetRef/SetRefMol and SetTarget/SetTargetMol before running
+     * the alignment.
+     */
+    OBFastAlign(bool includeH=false, bool symmetry=true);
+    /**
+     * Align two molecules.
+     */
+    //OBFastAlign(const OBMol &refmol, const OBMol &targetmol, bool includeH=false, bool symmetry=true);
+    /**
+     * Align two vectors of vector3 objects.
+     */
+    //OBFastAlign(const vector<vector3> &ref, const vector<vector3> &target);
+    //@}
+
+    ///@name Partial Setup
+    //@{
+    /**
+     * Set the Reference (to which the Target will be aligned) in
+     * terms of a vector of vector3 objects. Note that it is faster
+     * to perform multiple alignments to the same Reference, rather than
+     * multiple alignments to the same Target.
+     */
+    void SetRef(const double* ref, int len);
+    /**
+     * Set the Target (which will be aligned to the Reference) in
+     * terms of a vector of vector3 objects.
+     */
+    void SetTarget(const double* target);
+    /**
+     * Set the Reference Molecule (to which the Target Molecule must
+     * be aligned). Note that is faster to perform multiple alignments
+     * to the same Reference Molecule, rather than multple alignments
+     * to the same Target Molecule.
+     */
+    void SetRefMol(const OBMol &refmol);
+    /**
+     * Set the Target Molecule (which will be aligned to the
+     * Reference Molecule).
+     */
+    void SetTargetMol(const OBMol &targetmol);
+    //@}
+
+    ///@name Execute the alignment
+    //@{
+    /**
+     * Align the Target to the Reference using a least-squares alignment.
+     */
+    bool Align();
+    
+    enum AlignMethod {
+      Kabsch = 0,   // Returns matrix and RMSD
+      QCP    = 1    // Returns just RMSD (fast)
+    };
+
+    void SetMethod(enum AlignMethod method);
+    //@}
+
+    ///@name Access the result of the alignment
+    //@{
+    /**
+     * Return the root mean squared deviation of the target from
+     * the reference. This function should only
+     * be called after running the alignment (using Align()).
+     */
+    double GetRMSD();
+    /**
+     * Return the actual alignment of the Target to the Reference
+     * in terms of a vector of vector3 objects. If you want an OBMol 
+     * with the aligned coordinates, you should use UpdateCoords() instead.
+     * This function should only
+     * be called after running the alignment (using Align()).
+     */
+    vector<vector3> GetAlignment();
+    /**
+     * Set the coordinates of an OBMol to those from the alignment.
+     * This function should only
+     * be called after running the alignment (using Align()).
+     */
+    bool UpdateCoords(OBMol* target);
+    //@}
+
+  private:
+    bool _ready, _fail;
+    bool _symmetry;
+    bool _includeH;
+    int _len;
+    enum AlignMethod _method;
+    double _rmsd;
+    OBBitVec _frag_atoms;
+    // OBIsomorphismMapper::Mappings _aut;
+    vector<map<unsigned int, unsigned int> > _aut;
+    const OBMol* _prefmol;
+    const OBMol* _ptargetmol;
+    Eigen::MatrixXd _rotMatrix;
+    vector<double> _ref_centr, _target_centr;
+    const double** _pref;
+    const double** _ptarget;
+    vector<vector3> _refmol_coords;
+    vector<vector3> _targetmol_coords;
+    Eigen::MatrixXd _result;
+    double* _mref;
+    double* _mtarget;
+    void VectorsToMatrix(const vector<vector3> *pcoords, Eigen::MatrixXd &coords);
+    vector<double> MoveToOrigin(const double** origcoords, double* &newcoords);
+    void SimpleAlign(const double* mtarget);
+    //void TheobaldAlign(const Eigen::MatrixXd &mtarget);
+    // Generate a mapping from the permutation map to the index of
+    // correct column in _mtarget. Need to handle the fact that the
+    // permutation group contains non-fragment atoms.
+    // For example, map(213465) will be converted to newidx(102354).
+    // If the atom with Idx=3 is not in the fragment, it will be
+    // converted to newidx(10X243) instead.
+    vector<unsigned int> _newidx;
+  };
+}
+
+#endif // OB_FASTALIGN_H

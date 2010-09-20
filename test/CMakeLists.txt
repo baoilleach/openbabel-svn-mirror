@@ -34,6 +34,7 @@ set(tests
 if (EIGEN2_FOUND)
 set(tests
         align
+	fastalign
         ${tests}
 )
 endif (EIGEN2_FOUND)
