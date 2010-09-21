@@ -21,6 +21,9 @@ GNU General Public License for more details.
 
 #include <openbabel/mol.h>
 #include <openbabel/rotor.h>
+#include <openbabel/graphsym.h>
+
+#include <set>
 
 // private data headers with default parameters
 #include "torlib.h"
@@ -63,6 +66,9 @@ namespace OpenBabel
 		  ref[0],ref[1],ref[2],ref[3]);
           obErrorLog.ThrowError(__FUNCTION__, buffer, obDebug);
         }
+
+    // Reduce the number of torsions to be checked through symmetry considerations
+    RemoveSymVals(mol);
 
     return(true);
   }
@@ -215,164 +221,49 @@ namespace OpenBabel
     return(true);
   }
 
-
-  static double MinimumPairRMS(OBMol&,double*,double*,bool &);
-
-  void OBRotorList::RemoveSymVals(OBMol &mol)
+ void OBRotorList::RemoveSymVals(OBMol &mol)
   {
-    double *c,*c1,*c2;
-    c1 = new double [mol.NumAtoms()*3];
-    c2 = new double [mol.NumAtoms()*3];
-    c = mol.GetCoordinates();
-    bool one2one;
-    double cutoff = 0.20;
+    OBGraphSym gs(&mol);
+    vector<unsigned int> sym_classes;
+    gs.GetSymmetry(sym_classes);
 
     OBRotor *rotor;
     vector<OBRotor*>::iterator i;
-    for (rotor = BeginRotor(i);rotor;rotor = NextRotor(i))
-      {
-        //look for 2-fold symmetry about a bond
-        memcpy(c1,c,sizeof(double)*mol.NumAtoms()*3);
-        memcpy(c2,c,sizeof(double)*mol.NumAtoms()*3);
-        rotor->SetToAngle(c1,(double)(0.0*DEG_TO_RAD));
-        rotor->SetToAngle(c2,(double)(180.0*DEG_TO_RAD));
+    std::set<unsigned int> syms;
+    for (rotor = BeginRotor(i);rotor;rotor = NextRotor(i)) {
+      OBBond* bond = rotor->GetBond();
+      OBAtom* end = bond->GetEndAtom();
+      OBAtom* begin = bond->GetBeginAtom();
 
-        if (MinimumPairRMS(mol,c1,c2,one2one) <cutoff && !one2one)
-          {
-            rotor->RemoveSymTorsionValues(2);
-            OBBond *bond = rotor->GetBond();
-
-            if (!_quiet)
-              {
-                stringstream errorMsg;
-                errorMsg << "symmetry found = " << ' ';
-                errorMsg << bond->GetBeginAtomIdx() << ' ' << bond->GetEndAtomIdx() << ' ' ;
-                errorMsg << "rms = " << ' ';
-                errorMsg << MinimumPairRMS(mol,c1,c2,one2one) << endl;
-                obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obDebug);
-              }
-            continue;
-          }
-
-        //look for 3-fold symmetry about a bond
-        memcpy(c1,c,sizeof(double)*mol.NumAtoms()*3);
-        memcpy(c2,c,sizeof(double)*mol.NumAtoms()*3);
-        rotor->SetToAngle(c1,(double)(0.0*DEG_TO_RAD));
-        rotor->SetToAngle(c2,(double)(120.0*DEG_TO_RAD));
-
-        if (MinimumPairRMS(mol,c1,c2,one2one) <cutoff && !one2one)
-          {
-            rotor->RemoveSymTorsionValues(3);
-            OBBond *bond = rotor->GetBond();
-
-            if (!_quiet)
-              {
-                stringstream errorMsg;
-                errorMsg << "3-fold symmetry found = " << ' ';
-                errorMsg << bond->GetBeginAtomIdx() << ' ' << bond->GetEndAtomIdx() << ' ' ;
-                errorMsg << "rms = " << ' ';
-                errorMsg << MinimumPairRMS(mol,c1,c2,one2one) << endl;
-                obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obDebug);
-              }
-          }
-      }
-
-    delete [] c1;
-    delete [] c2;
-
-    //pattern based duplicate removal
-    int ref[4];
-    vector<vector<int> > mlist;
-    vector<vector<int> >::iterator k;
-    vector<pair<OBSmartsPattern*,pair<int,int> > >::iterator j;
-    for (j = _vsym2.begin();j != _vsym2.end();++j)
-      if (j->first->Match(mol))
-        {
-          mlist = j->first->GetUMapList();
-
-          for (k = mlist.begin();k != mlist.end();++k)
-            for (rotor = BeginRotor(i);rotor;rotor = NextRotor(i))
-              {
-                rotor->GetDihedralAtoms(ref);
-                if (((*k)[j->second.first] == ref[1] && (*k)[j->second.second] == ref[2]) ||
-                    ((*k)[j->second.first] == ref[2] && (*k)[j->second.second] == ref[1]))
-                  {
-                    rotor->RemoveSymTorsionValues(2);
-                    if (!_quiet)
-                      {
-                        stringstream errorMsg;
-                        errorMsg << "2-fold pattern-based symmetry found = " << ' ';
-                        errorMsg << ref[1] << ' ' << ref[2] << endl;
-                        obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obDebug);
-                      }
-                  }
-              }
+      for (int here=0; here <= 1; ++here) { // Try each side of the bond in turn
+        
+        OBAtom *this_side, *other_side;
+        if (here == 0) {
+          this_side = begin; other_side = end;
+        }
+        else {
+          this_side = end; other_side = begin;
         }
 
-    for (j = _vsym3.begin();j != _vsym3.end();++j)
-      if (j->first->Match(mol))
-        {
-          mlist = j->first->GetUMapList();
-
-          for (k = mlist.begin();k != mlist.end();++k)
-            for (rotor = BeginRotor(i);rotor;rotor = NextRotor(i))
-              {
-                rotor->GetDihedralAtoms(ref);
-                if (((*k)[j->second.first] == ref[1] && (*k)[j->second.second] == ref[2]) ||
-                    ((*k)[j->second.first] == ref[2] && (*k)[j->second.second] == ref[1]))
-                  {
-                    rotor->RemoveSymTorsionValues(3);
-                    if (!_quiet)
-                      {
-                        stringstream errorMsg;
-                        errorMsg << "3-fold pattern-based symmetry found = " << ' ';
-                        errorMsg << ref[1] << ' ' << ref[2] << endl;
-                        obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obDebug);
-                      }
-                  }
-              }
+        for (int hyb=2; hyb<=3; ++hyb) { // sp2 and sp3 carbons, with explicit Hs
+          if (this_side->GetAtomicNum() == 6 && this_side->GetHyb() == hyb && this_side->GetValence() == (hyb + 1) ) {
+            syms.clear();
+            FOR_NBORS_OF_ATOM(nbr, this_side) {
+              if ( &(*nbr) == other_side ) continue;
+              syms.insert(sym_classes[nbr->GetIdx() - 1]);
+            }
+            if (syms.size() == 1) { // All of the rotated atoms have the same symmetry class
+              cout << "Removed torsions due to " << hyb << "-fold symmetry from atoms " << 
+                this_side->GetIdx() << " to " << other_side->GetIdx() << ".\n";
+              rotor->RemoveSymTorsionValues(hyb);
+              cout << "Now this torsion has " << rotor->Size() << " settings.\n";
+            }
+          }
         }
-  }
-
-  static double MinimumPairRMS(OBMol &mol,double *a,double *b,bool &one2one)
-  {
-    unsigned int i,j,k=0;
-    double min,tmp,d_2 = 0.0;
-    OBBitVec bset;
-    one2one = true;
-    vector<OBAtom*> _atom;
-    _atom.resize(mol.NumAtoms());
-    for (i = 0;i < mol.NumAtoms();++i)
-      _atom[i] = mol.GetAtom(i+1);
-
-    for (i = 0;i < mol.NumAtoms();++i)
-      {
-        min = 10E10;
-        for (j = 0;j < mol.NumAtoms();++j)
-          if ((_atom[i])->GetAtomicNum() == (_atom[j])->GetAtomicNum() &&
-              (_atom[i])->GetHyb()       == (_atom[j])->GetHyb())
-            if (!bset[j])
-              {
-                tmp = SQUARE(a[3*i]-b[3*j]) +
-                  SQUARE(a[3*i+1]-b[3*j+1]) +
-                  SQUARE(a[3*i+2]-b[3*j+2]);
-                if (tmp < min)
-                  {
-                    k = j;
-                    min = tmp;
-                  }
-              }
-
-        if (i != j)
-          one2one = false;
-        bset.SetBitOn(k);
-        d_2 += min;
       }
+    }
 
-    d_2 /= (double)mol.NumAtoms();
-
-    return(sqrt(d_2));
-  }
+ }
 
   bool OBRotorList::SetEvalAtoms(OBMol &mol)
   {
@@ -547,10 +438,10 @@ namespace OpenBabel
     _quiet=false;
     _removesym=true;
 
-    //para-disub benzene
+    //substituted benzene
     OBSmartsPattern *sp;
     sp = new OBSmartsPattern;
-    sp->Init("*c1[cD2][cD2]c(*)[cD2][cD2]1");
+    sp->Init("[*;!#1]c1[c][c]c(*)[c][c]1");
     _vsym2.push_back(pair<OBSmartsPattern*,pair<int,int> > (sp,pair<int,int> (0,1)));
 
     //piperidine amide
