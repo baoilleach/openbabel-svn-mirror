@@ -51,7 +51,7 @@ namespace OpenBabel
      **/
   public:
     LFSR::LFSR(unsigned int range, unsigned int start);
-    unsigned int GetNext(); // Return 0 when finished
+    unsigned int GetNext(); // Return 1 when finished
   private:
     unsigned int _range, _lfsr, _poly;
     static const unsigned int _polynomials[31];
@@ -65,7 +65,8 @@ namespace OpenBabel
   LFSR::LFSR(unsigned int range, unsigned int start = 1): _range(range), _lfsr(start)
   {
     assert ( _range < (1 << 31) ); // We can only handle up to 2^31 - 1
-    assert ( start < _range ); // Otherwise the _start value will never be returned
+    // (Currently don't use a start value)
+    // assert ( start < _range ); // Otherwise the _start value will never be returned
 
     int i = 0;
     unsigned int tot = 4;

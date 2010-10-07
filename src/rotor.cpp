@@ -68,7 +68,8 @@ namespace OpenBabel
         }
 
     // Reduce the number of torsions to be checked through symmetry considerations
-    RemoveSymVals(mol);
+    if (_removesym)
+      RemoveSymVals(mol);
 
     return(true);
   }
@@ -234,7 +235,7 @@ namespace OpenBabel
       OBBond* bond = rotor->GetBond();
       OBAtom* end = bond->GetEndAtom();
       OBAtom* begin = bond->GetBeginAtom();
-
+      int N_fold_symmetry = 1;
       for (int here=0; here <= 1; ++here) { // Try each side of the bond in turn
         
         OBAtom *this_side, *other_side;
@@ -252,17 +253,19 @@ namespace OpenBabel
               if ( &(*nbr) == other_side ) continue;
               syms.insert(sym_classes[nbr->GetIdx() - 1]);
             }
-            if (syms.size() == 1) { // All of the rotated atoms have the same symmetry class
-              cout << "Removed torsions due to " << hyb << "-fold symmetry from atoms " << 
-                this_side->GetIdx() << " to " << other_side->GetIdx() << ".\n";
-              rotor->RemoveSymTorsionValues(hyb);
-              cout << "Now this torsion has " << rotor->Size() << " settings.\n";
-            }
+            if (syms.size() == 1) // All of the rotated atoms have the same symmetry class
+              N_fold_symmetry *= hyb;
           }
         }
       }
-    }
 
+      if (N_fold_symmetry  > 1) {
+        cout << "Removed torsions due to combined " << N_fold_symmetry << "-fold symmetry from atoms " << 
+          begin->GetIdx() << " to " << end->GetIdx() << ".\n";
+        rotor->RemoveSymTorsionValues(N_fold_symmetry);
+        cout << "Now this torsion has " << rotor->Size() << " settings.\n";
+      }
+    }
  }
 
   bool OBRotorList::SetEvalAtoms(OBMol &mol)
@@ -437,23 +440,6 @@ namespace OpenBabel
     _rotor.clear();
     _quiet=false;
     _removesym=true;
-
-    //substituted benzene
-    OBSmartsPattern *sp;
-    sp = new OBSmartsPattern;
-    sp->Init("[*;!#1]c1[c][c]c(*)[c][c]1");
-    _vsym2.push_back(pair<OBSmartsPattern*,pair<int,int> > (sp,pair<int,int> (0,1)));
-
-    //piperidine amide
-    sp = new OBSmartsPattern;
-    sp->Init("O=CN1[CD2][CD2][CD2][CD2][CD2]1");
-    _vsym2.push_back(pair<OBSmartsPattern*,pair<int,int> > (sp,pair<int,int> (1,2)));
-
-    //terminal phosphate
-    sp = new OBSmartsPattern;
-    sp->Init("[#8D2][#15,#16](~[#8D1])(~[#8D1])~[#8D1]");
-    _vsym3.push_back(pair<OBSmartsPattern*,pair<int,int> > (sp,pair<int,int> (0,1)));
-
   }
 
   OBRotorList::~OBRotorList()
@@ -461,13 +447,6 @@ namespace OpenBabel
     vector<OBRotor*>::iterator i;
     for (i = _rotor.begin();i != _rotor.end();++i)
       delete *i;
-
-    vector<pair<OBSmartsPattern*,pair<int,int> > >::iterator j;
-    for (j = _vsym2.begin();j != _vsym2.end();++j)
-      delete j->first;
-
-    for (j = _vsym3.begin();j != _vsym3.end();++j)
-      delete j->first;
   }
 
   void OBRotorList::Clear()
@@ -722,6 +701,7 @@ namespace OpenBabel
       }
   }
 
+  //! Remove all torsions angles between 0 and 360/fold
   void OBRotor::RemoveSymTorsionValues(int fold)
   {
     vector<double>::iterator i;
@@ -730,13 +710,8 @@ namespace OpenBabel
       return;
 
     for (i = _torsionAngles.begin();i != _torsionAngles.end();++i)
-      if (*i >= 0.0)
-        {
-          if (fold == 2 && *i < DEG_TO_RAD*180.0)
-            tv.push_back(*i);
-          if (fold == 3 && *i < DEG_TO_RAD*120.0)
-            tv.push_back(*i);
-        }
+      if (*i >= 0.0 && *i < 2.0*M_PI / fold)
+        tv.push_back(*i);
 
     if (tv.empty())
       return;
