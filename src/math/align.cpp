@@ -34,14 +34,15 @@ using namespace std;
 
 namespace OpenBabel
 {
-  OBAlign::OBAlign(bool includeH, bool symmetry) {
+  OBAlign::OBAlign(bool includeH, bool symmetry) : _method(OBAlign::Kabsch)
+  {
     _ready = false;
     _symmetry = symmetry;
     _includeH = includeH;
     _prefmol = 0;
   }
 
-  OBAlign::OBAlign(const vector<vector3> &ref, const vector<vector3> &target)
+  OBAlign::OBAlign(const vector<vector3> &ref, const vector<vector3> &target) : _method(OBAlign::Kabsch)
   {
     SetRef(ref);
     SetTarget(target);
@@ -49,7 +50,8 @@ namespace OpenBabel
     _prefmol = 0;
   }
 
-  OBAlign::OBAlign(const OBMol &refmol, const OBMol &targetmol, bool includeH, bool symmetry) {
+  OBAlign::OBAlign(const OBMol &refmol, const OBMol &targetmol, bool includeH, bool symmetry) : _method(OBAlign::Kabsch)
+  {
     _symmetry = symmetry;
     _includeH = includeH;
     SetRefMol(refmol);
