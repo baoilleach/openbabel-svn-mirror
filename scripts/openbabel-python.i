@@ -221,6 +221,7 @@ http://openbabel.org/wiki/Using_OpenBabel_from_Python#Using_iterators""")
 IGNORE_ITER(OBMol, Bond)
 IGNORE_ITER(OBMol, Atom)
 IGNORE_ITER(OBMol, Residue)
+%ignore operator<< (std::ostream &out, OBMol &mol);
 %include <openbabel/mol.h>
 %pythoncode %{
 OBMol.BeginAtoms = OBMol.EndAtoms = OBMol.BeginAtom = OBMol.EndAtom = exceptionIter
