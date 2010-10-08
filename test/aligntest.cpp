@@ -72,6 +72,18 @@ void test_simpleAlign()
   OB_ASSERT( result[0].IsApprox(ref[0], 1.0E-08) );
   OB_ASSERT( result[1].IsApprox(ref[1], 1.0E-08) );
   OB_ASSERT( fabs(align.GetRMSD()) < 1.0E-08 );
+
+  // Verify that using GetRotMatrix() works to rotate bd onto ac
+  matrix3x3 rot = align.GetRotMatrix();
+  vector<vector3> centroids;
+  centroids.push_back( (b + d) / 2);
+  centroids.push_back( (a + c) / 2);
+  for (int i = 0; i<2; ++i) {
+    vector3 aligned = target[i] - centroids[0];
+    aligned *= rot;
+    aligned += centroids[1];
+    OB_ASSERT( aligned.IsApprox(ref[i], 1.0E-08) ); 
+  }
 }
 
 void test_RMSD()
@@ -98,7 +110,7 @@ void test_RMSD()
   OBAlign align(ref, target);
   align.Align();
   rmsd = align.GetRMSD();
-  OB_ASSERT( fabs(rmsd - 0.0288675) < 1.0E-06 );
+  OB_ASSERT( fabs(rmsd - 0.05) < 1.0E-06 );
 }
 
 void test_alignMol(){
@@ -251,19 +263,19 @@ void test_alignWithSymWithoutHydrogens() {
   OBAlign align = OBAlign(mol, clone, true, false);
   align.Align();
   double rmsd = align.GetRMSD();
-  OB_ASSERT( fabs(rmsd) > 0.5 );
+  OB_ASSERT( fabs(rmsd) > 1.2 );
 
   // Align molecule to clone with hydrogens and with sym
   align = OBAlign(mol, clone, true, true);
   align.Align();
   rmsd = align.GetRMSD();
-  OB_ASSERT( fabs(rmsd) < 0.010 ); // It's actually around 0.0096 but this is as good as it gets it seems
+  OB_ASSERT( fabs(rmsd) < 0.017 );
 
   // Align molecule to clone without hydrogens and with sym
   align = OBAlign(mol, clone, false, true);
   align.Align();
   rmsd = align.GetRMSD();
-  OB_ASSERT( fabs(rmsd) < 0.011 ); // It's actually around 0.0105
+  OB_ASSERT( fabs(rmsd) < 0.019 );
 }
 
 void testQCP()

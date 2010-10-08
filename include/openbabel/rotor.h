@@ -406,7 +406,7 @@ namespace OpenBabel
     ///@name Deprecated
     ///@{
     /** @deprecated Has no effect. */
-    void SetDelta(double d) {}
+    void SetDelta(double UNUSED(d)) {}
     /** @deprecated Has no effect. */
     double GetDelta() { return 10.0; }
     /** @deprecated */
@@ -422,7 +422,7 @@ namespace OpenBabel
     /** @deprecated Bad name, see GetTorsionValues() */
     std::vector<double> &GetResolution() { return _torsionAngles; }
     /** @deprecated */
-    void SetNumCoords(int nc) {}
+    void SetNumCoords(int UNUSED(nc)) {}
     ///@}
 
   };
@@ -735,10 +735,10 @@ namespace OpenBabel
       unsigned int NumKeys()
       {
 	unsigned int numKeys = 0;
-	
+
 	while (Next())
 	  numKeys++;
-	
+
 	return numKeys;
       }
 

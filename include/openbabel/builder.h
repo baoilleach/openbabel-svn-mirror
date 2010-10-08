@@ -1,16 +1,16 @@
 /**********************************************************************
 builder.h - OBBuilder class.
- 
-Copyright (C) 2007-2008 by Tim Vandermeersch 
+
+Copyright (C) 2007-2008 by Tim Vandermeersch
                            <tim.vandermeersch@gmail.com>
- 
+
 This file is part of the Open Babel project.
 For more information, see <http://openbabel.sourceforge.net/>
- 
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation version 2 of the License.
- 
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -41,11 +41,11 @@ namespace OpenBabel
 
       ///@name Call the build algorithm
       //@{
-      /*! The mol object contains all connectivity information (atomic numbers, bonds, bond orders, ..) 
+      /*! The mol object contains all connectivity information (atomic numbers, bonds, bond orders, ..)
        *  but no 3D coordinates. Build generates these coordinates and assigns them.
        *  \param mol Molecule with the connectivity (from smiles for example). The coordinates are also
        *         changed in this mol.
-       */    
+       */
       bool Build(OBMol &mol);
       //@}
 
@@ -70,7 +70,7 @@ namespace OpenBabel
       /*! Get the position for a new neighbour on atom.
        *  \param atom Atom for which we want a new neighbour location.
        *  \returns The position for the new atom.
-       */  
+       */
       static vector3 GetNewBondVector(OBAtom *atom);
       static vector3 GetNewBondVector(OBAtom *atom, double length);
       /*! Atoms a and b are part of two fragments that are not connected in mol.
@@ -81,7 +81,7 @@ namespace OpenBabel
        *  \param b Index for atom in fragment that should be rotated.
        *  \param newpos Direction for new bond between a and b
        *  \param bondOrder Bond order of the new bond between a and b.
-       *  \returns true if succesful or fails when failed (most likely cause 
+       *  \returns true if succesful or fails when failed (most likely cause
        *  for failing: a and b are in the same fragment, they are connected)
        */
       static bool Connect(OBMol &mol, int a, int b, vector3 &newpos, int bondOrder = 1);
@@ -92,20 +92,20 @@ namespace OpenBabel
        *  \param a Index for atom in fragment that should not be rotated.
        *  \param b Index for atom in fragment that should be rotated.
        *  \param bondOrder Bond order of the new bond bewtween a and b.
-       *  \returns true if succesfull or fails when failed (most likely cause 
+       *  \returns true if succesfull or fails when failed (most likely cause
        *  for failing: a and b are in the same fragment, they are connected)
        */
       static bool Connect(OBMol &mol, int a, int b, int bondOrder = 1);
       /*! Swap group b, bonded to a with group d, bonded to c. The bonds a-b and b-c cannot be
        *  part of a ring. Atoms a and b will not be moved. Atoms b, d and their connected atoms
-       *  (after deleting bonds ab and cd) will be translated/rotated. 
-       *  
+       *  (after deleting bonds ab and cd) will be translated/rotated.
+       *
        *  Example:
        *  \code
        *    \ /                            /
        *     b                            d
        *      \     /     Swap(a,b,c,d)    \     /
-       *       a---x          ---->         a---x 
+       *       a---x          ---->         a---x
        *      /     \     /                /     \     /
        *     x       c---d                x       c---b
        *                                               \
@@ -122,21 +122,21 @@ namespace OpenBabel
        *     |                        |
        *     4                        4
        *  \endcode
-       */   
+       */
       static bool Swap(OBMol &mol, int a, int b, int c, int d);
-      /*! Atoms a and b must be bonded and this bond cannot be part of a ring. The bond will 
+      /*! Atoms a and b must be bonded and this bond cannot be part of a ring. The bond will
        *  be broken and the smiles fragment will be inserted bewteen the two remaining fragments.
        *  The fragment that contains a will not be translated or rotated. Parameters c and d are
        *  the index in the smiles to which atoms a and b will be connected respectivly.
        *
-       */  
+       */
       //bool Insert(OBMol &mol, int a, int b, std::string smiles, int c, int d);
       /*! Correct double bond stereochemistry
-       */ 
+       */
       static void CorrectStereoBonds(OBMol &mol);
       /*! Correct stereochemistry at tetrahedral atoms with at least two non-ring
        * bonds. It also works for spiro atoms.
-       */ 
+       */
       static void CorrectStereoAtoms(OBMol &mol);
       /*! Does this atom connect two rings which are not otherwise connected?
       */
@@ -147,7 +147,7 @@ namespace OpenBabel
        */
       static OBBitVec GetFragment(OBAtom *atom);
       static void AddNbrs(OBBitVec &fragment, OBAtom *atom);
- 
+
     private:
       //! If true, then ring conformations are taken from the input structure
       //  (which should be 3D)

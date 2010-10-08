@@ -1,14 +1,14 @@
 /**********************************************************************
 Copyright (C) 2005 by Chris Morley
 Some portions Copyright (C) 2006 by Geoffrey R. Hutchison
- 
+
 This file is part of the Open Babel project.
 For more information, see <http://openbabel.sourceforge.net/>
- 
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation version 2 of the License.
- 
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -46,9 +46,10 @@ namespace OpenBabel
 
   public:
     //Constuctor used on startup which registers this format type ID
-    CMLFormat() 
+    CMLFormat()
     {
       OBConversion::RegisterFormat("cml", this, "chemical/x-cml");
+      OBConversion::RegisterFormat("mrv", this); //subset of Marvin only
 			OBConversion::RegisterOptionParam("1", this);
 			OBConversion::RegisterOptionParam("a", this);
 			OBConversion::RegisterOptionParam("N", this, 1);
@@ -118,7 +119,7 @@ namespace OpenBabel
         "an atom, implicit hydrogen is assumed to be present appropriate\n"
         "to the radical or spinMultiplicity attributes on the atom or\n"
         "its normal valency if they are not present.\n\n"
-        
+
         "The XML formats require the XML text to be well formed but\n"
         "generally interpret it fairly tolerantly. Unrecognised elements\n"
         "and attributes are ignored and there are rather few error messages\n"
@@ -137,7 +138,7 @@ namespace OpenBabel
     virtual const char* SpecificationURL()
     {return "http://www.xml-cml.org/";}
 
-    virtual const char* GetMIMEType() 
+    virtual const char* GetMIMEType()
     { return "chemical/x-cml"; };
 
     virtual unsigned int Flags()
@@ -206,7 +207,7 @@ namespace OpenBabel
   /*
     There are 4 CML styles: CML1, CML2, both with and without array forms.
     All styles are converted into the same internal structure in AtomArray
-    and BondArray which contains pairs of (attribute)name/value pairs for 
+    and BondArray which contains pairs of (attribute)name/value pairs for
     each atom or bond. At the end of molecule this is analysed in DoAtoms()
     and DoBonds() to construct an OBMol.
   */
@@ -224,7 +225,7 @@ namespace OpenBabel
         TransferElement(AtomArray);
         if(IsEmpty==1) //have to push here because end atom may not be called
           AtomArray.push_back(cmlBondOrAtom);
-      }	
+      }
     else if(name=="bond")
       {
         cmlBondOrAtom.clear();
@@ -287,10 +288,10 @@ namespace OpenBabel
     else if(name=="atomParity" || name=="bondStereo")
       {
         //Save in molWideData:
-        //the content,  the atomRefs4 attribute, and (for atomParity only) the centralAtom 
+        //the content,  the atomRefs4 attribute, and (for atomParity only) the centralAtom
         string atrefs4("atomRefs4");
         value = _pxmlConv->GetAttribute(atrefs4.c_str());
-        pair<string,string> atomrefdata(atrefs4,value);					
+        pair<string,string> atomrefdata(atrefs4,value);
 
         xmlTextReaderRead(reader());
         const xmlChar* pvalue = xmlTextReaderConstValue(reader());
@@ -298,10 +299,10 @@ namespace OpenBabel
           {
             value = (const char*)pvalue;
             Trim(value);
-            pair<string,string> nameAndvalue(name,value);					
-            molWideData.push_back(nameAndvalue);			
+            pair<string,string> nameAndvalue(name,value);
+            molWideData.push_back(nameAndvalue);
             molWideData.push_back(atomrefdata);
-			
+
             stringstream ss;
             if(name=="atomParity")
               ss << AtomArray.size()+1; //index of current atom
@@ -330,7 +331,7 @@ namespace OpenBabel
       }
     else if(name=="crystal")
       {
-        CrystalScalarsNeeded = 6;	
+        CrystalScalarsNeeded = 6;
       }
     else if(name=="scalar")
       {
@@ -353,11 +354,11 @@ namespace OpenBabel
           }
         else if(PropertyScalarsNeeded)
           {
-            //Reads OBPairData(like SDF properties). Name is in scalar title or id attribute 
+            //Reads OBPairData(like SDF properties). Name is in scalar title or id attribute
             const xmlChar* pattr  = xmlTextReaderGetAttribute(reader(), BAD_CAST "title");
             if(!pattr)
               pattr  = xmlTextReaderGetAttribute(reader(), BAD_CAST "id");
-            
+
             string attr;
             if(pattr)
               attr = (const char*)pattr;
@@ -473,7 +474,7 @@ namespace OpenBabel
     else	if(name=="stringArray" || name=="floatArray" || name=="integerArray")
       {
         string name = _pxmlConv->GetAttribute("builtin");
-        //		cmlArray& arr = (name=="atomRef1" || name=="atomRef2" || name=="order") 
+        //		cmlArray& arr = (name=="atomRef1" || name=="atomRef2" || name=="order")
         //			? BondArray : AtomArray;
         cmlArray& arr = inBondArray ? BondArray : AtomArray;
 
@@ -489,7 +490,7 @@ namespace OpenBabel
           arr.resize(items.size());
         unsigned int i;
         for(i=0;i<items.size();++i)
-          {				
+          {
             pair<string,string> nameAndvalue(name,items[i]);
             arr[i].push_back(nameAndvalue);
           }
@@ -520,7 +521,7 @@ namespace OpenBabel
       {
         if(!DoAtoms() || !DoBonds() || !DoHCounts() || !DoMolWideData())
           return false;
-        
+
         if (_pmol->GetDimension()==0)
           StereoFrom0D(_pmol); // Remove any spurious stereos (due to symmetry)
 
@@ -582,7 +583,7 @@ namespace OpenBabel
             string& attrname = AttributeIter->first;
             string& value    = AttributeIter->second;
 
-            if(attrname=="id" || attrname=="atomId" || attrname=="atomID")//which one correct? 
+            if(attrname=="id" || attrname=="atomId" || attrname=="atomID")//which one correct?
               {
                 Trim(value);
                 if(AtomMap.count(value)>0)
@@ -604,7 +605,7 @@ namespace OpenBabel
                 continue;
               }
 
-            //If more than one set of coordinates provided, 
+            //If more than one set of coordinates provided,
             //prefer 3D over 2D over 3Dfractional,
             //but if use2d is true, prefer 2D over 3D
             else if((attrname=="x3" || attrname=="y3" || attrname=="z3" || attrname=="xyz3") && !use2d)
@@ -617,10 +618,10 @@ namespace OpenBabel
               using2 = true;
               usingFract = false;
             }
-            else if(pUnitCell && !using3 && !using2 
+            else if(pUnitCell && !using3 && !using2
               && (attrname=="xFract" || attrname=="yFract" || attrname=="zFract"))
               usingFract=true;
-            
+
             if(using3 && attrname=="x3" || using2 && attrname=="x2" || usingFract && attrname=="xFract")
               x=strtod(value.c_str(),NULL);
             else if(using3 && attrname=="y3" || using2 && attrname=="y2" || usingFract && attrname=="yFract")
@@ -669,7 +670,7 @@ namespace OpenBabel
                */
               }
 
-            else if(attrname=="formalCharge") 
+            else if(attrname=="formalCharge")
               pAtom->SetFormalCharge(atoi(value.c_str()));
 
             else if(attrname=="label")
@@ -755,7 +756,7 @@ namespace OpenBabel
           else
             pAtom->SetVector(x, y, z);
       }//each atom
-    
+
     if(aclass.size()>0)
       _pmol->SetData((new OBAtomClassData(aclass)));
 
@@ -783,17 +784,17 @@ namespace OpenBabel
             string attrname = AttributeIter->first;
             string value    = AttributeIter->second;
             Trim(value);
-		
-			
+
+
             if(attrname.compare(0, 7, "atomRef")==0) //generic
               {
                 PossibleBond = true;
                 string::size_type pos = value.find(' ');
-				
+
                 if(!HaveWarned && (attrname=="atomRefs1"
                                    || (attrname=="atomRefs2" && pos==string::npos)))
                   {
-                    obErrorLog.ThrowError(GetMolID(),	
+                    obErrorLog.ThrowError(GetMolID(),
                                           attrname + " is not legal CML in this context, "
                                           "but OpenBabel will attempt to understand what was meant.", obWarning);
                     HaveWarned = true;
@@ -821,7 +822,7 @@ namespace OpenBabel
                   }
               }
             else if(attrname=="order")
-              {	
+              {
                 const char bo = value[0];
                 if(bo=='S')
                   ord=1;
@@ -903,10 +904,10 @@ namespace OpenBabel
       if(iter->second == 0)
         //ensure no Hs are ever added
         _pmol->GetAtom(idx)->ForceNoH();
-      
+
       else
       {
-        //add extra hydrogens 
+        //add extra hydrogens
         for(unsigned i=0;i<iter->second - explH;++i)
         {
           OBAtom* hatom = _pmol->NewAtom();
@@ -931,7 +932,7 @@ namespace OpenBabel
         if(name=="atomParity" || name=="bondStereo")
           {
             vector<unsigned int> AtomRefIdx;
-			
+
             string nextname = (++AttributeIter)->first;
             string atrefsvalue = AttributeIter->second;
             if(nextname=="atomRefs4" && !atrefsvalue.empty())
@@ -946,7 +947,7 @@ namespace OpenBabel
             nextname = (++AttributeIter)->first;
             if(!(nextname=="centralAtomOrBond"))
               return false;
-			
+
             int Idx = atoi(AttributeIter->second.c_str());
             if(name=="atomParity")
               {
@@ -954,17 +955,21 @@ namespace OpenBabel
                 if(!patom)
                   return false;
 
-                
+                OBStereo::Ref center = patom->GetId();
                 OBStereo::Ref from = _pmol->GetAtom(AtomRefIdx[0])->GetId();
-                
+                if (from == center)
+                  from = OBStereo::ImplicitRef;
+
                 OBStereo::Refs refs;
                 vector<unsigned int>::const_iterator idx_cit=AtomRefIdx.begin();
                 ++idx_cit;
-                for (; idx_cit!=AtomRefIdx.end(); ++idx_cit)
-                  refs.push_back(_pmol->GetAtom(*idx_cit)->GetId());
-                
-                OBStereo::Ref center = patom->GetId();
-                
+                for (; idx_cit!=AtomRefIdx.end(); ++idx_cit) {
+                  OBStereo::Ref id = _pmol->GetAtom(*idx_cit)->GetId();
+                  if (id == center)
+                    id = OBStereo::ImplicitRef;
+                  refs.push_back(id);
+                }
+
                 int parity = atoi(value.c_str());
                 OBStereo::Winding winding = OBStereo::Clockwise; // parity > 0
                 if (parity < 0)
@@ -998,7 +1003,7 @@ namespace OpenBabel
                     if(value!="C" && value!="T")
                       continue;
                     //which is valid only with one substituent on each C
-					
+
                     OBAtom* pAt1 = pDBond->GetBeginAtom();
                     OBAtom* pAt2 = pDBond->GetEndAtom();
                     FOR_NBORS_OF_ATOM(a1,pAt1)
@@ -1007,7 +1012,7 @@ namespace OpenBabel
                           break;
                         pbond1 = _pmol->GetBond(pAt1->GetIdx(),a1->GetIdx());
                       }
-					
+
                     FOR_NBORS_OF_ATOM(a2,pAt2)
                       {
                         if(!a2->IsHydrogen() && &*a2!=pAt1)
@@ -1070,7 +1075,7 @@ namespace OpenBabel
   //////////////////////////////////////////////////////////
   bool CMLFormat::TransferArray(cmlArray& arr)
   {
-    //Reads attributes of the current node, e.g. atomID="a1 a2 a3" 
+    //Reads attributes of the current node, e.g. atomID="a1 a2 a3"
     //parses each of them into their separate items, e.g. a1, a2, a3
     //and pushes them as a pairs in each of the members of the array
     // e.g. ("atomID", "a1") in AtomArray[0], ("atomID", "a2") in AtomArray[1]
@@ -1092,8 +1097,8 @@ namespace OpenBabel
               arr.resize(items.size());
             unsigned int i;
             for(i=0;i<items.size();++i)
-              {				
-                pair<string,string> nameAndvalue(name,items[i]);					
+              {
+                pair<string,string> nameAndvalue(name,items[i]);
                 arr[i].push_back(nameAndvalue);
               }
             ret = xmlTextReaderMoveToNextAttribute(reader());
@@ -1104,7 +1109,7 @@ namespace OpenBabel
 
   bool CMLFormat::TransferElement(cmlArray& arr)
   {
-    //Reads the attributes of the current node, e.g. <atom id="a1" elementType="C"/> 
+    //Reads the attributes of the current node, e.g. <atom id="a1" elementType="C"/>
     //pushes each of them as a pairs into each of the members of the array
     // e.g. ("id", "a1") and (elementType", "C") will be put into AtomArray[n]
     //where n is the number of times this routine has been called before.
@@ -1123,8 +1128,8 @@ namespace OpenBabel
                 value = (const char*)pvalue;
                 Trim(value);
               }
-            pair<string,string> nameAndvalue(name,value);					
-            cmlBondOrAtom.push_back(nameAndvalue);			
+            pair<string,string> nameAndvalue(name,value);
+            cmlBondOrAtom.push_back(nameAndvalue);
             ret = xmlTextReaderMoveToNextAttribute(reader());
           }
       }
@@ -1185,11 +1190,11 @@ namespace OpenBabel
         if(pattr && pvalue)
           {
             if(!strcmp(pattr,"NasaLowT"))
-              pTD->SetLoT(atof(pvalue));	
+              pTD->SetLoT(atof(pvalue));
             else if(!strcmp(pattr,"NasaHighT"))
-              pTD->SetHiT(atof(pvalue));	
+              pTD->SetHiT(atof(pvalue));
             else if(!strcmp(pattr,"NasaMidT"))
-              pTD->SetMidT(atof(pvalue));	
+              pTD->SetMidT(atof(pvalue));
             else if(!strcmp(pattr,"NasaCoeffs"))
               {
                 vector<string> vals;
@@ -1203,7 +1208,7 @@ namespace OpenBabel
 
 
   void CMLFormat::WriteMetadataList()
-  {	
+  {
     static const xmlChar C_METADATALIST[] = "metadataList";
     static const xmlChar C_METADATA[]     = "metadata";
     static const xmlChar C_TITLE[]        = "title";
@@ -1319,7 +1324,7 @@ namespace OpenBabel
     static const xmlChar C_INTEGERARRAY[] = "integerArray";
     static const xmlChar C_FLOATARRAY[]   = "floatArray";
     /* used as ordinary text
-       atomRef  
+       atomRef
     */
 
     const xmlChar* C_X3orFRACT = C_X3; //Non-fraction coordinates are the default
@@ -1355,7 +1360,7 @@ namespace OpenBabel
             uri=NULL;
           }
       }
-	
+
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
     if(pmol==NULL)
     {
@@ -1398,7 +1403,7 @@ namespace OpenBabel
 
 
     xmlTextWriterStartElementNS(writer(), prefix, C_MOLECULE, uri);
-	
+
     const char* id = mol.GetTitle();
     if(*id)
       {
@@ -1452,7 +1457,7 @@ namespace OpenBabel
             tetStereos[cfg.center] = cfg;
         }
     }
-    
+
     vector<string> atomIds;
     if(mol.NumAtoms()>0)
       {
@@ -1528,7 +1533,7 @@ namespace OpenBabel
                       xmlTextWriterWriteFormatAttribute(writer(), C_ID,"%s", atomIds[patom->GetIdx()].c_str());
 
                     if(!cml1)
-                      {	
+                      {
                         xmlTextWriterWriteFormatAttribute(writer(), C_ELEMENTTYPE,"%s", el.c_str());
                         if(isotope)
                           xmlTextWriterWriteFormatAttribute(writer(), C_ISOTOPE,"%d", isotope);
@@ -1541,15 +1546,15 @@ namespace OpenBabel
 
                         if(UseHydrogenCount && hcount)
                           xmlTextWriterWriteFormatAttribute(writer(), C_HYDROGENCOUNT,"%d", hcount);
-                          
+
                         if(patom->HasData("label"))
                             xmlTextWriterWriteFormatAttribute(writer(), C_LABEL,"%s",
                             patom->GetData("label")->GetValue().c_str());
-                            
+
                         if(patom->HasData("color"))
                           xmlTextWriterWriteFormatAttribute(writer(), C_COLOR,"%s",
                           patom->GetData("color")->GetValue().c_str());
-                          
+
                         if(patom->HasData("radius"))
                           xmlTextWriterWriteFormatAttribute(writer(), C_RADIUS,"%s",
                           patom->GetData("radius")->GetValue().c_str());
@@ -1565,20 +1570,24 @@ namespace OpenBabel
                             xmlTextWriterWriteFormatAttribute(writer(), C_Y3orFRACT,"%f", Y);
                             xmlTextWriterWriteFormatAttribute(writer(), C_Z3orFRACT,"%f", Z);
                           }
-                        
+
                         if( (tetStereo_cit=tetStereos.find(patom->GetId())) != tetStereos.end() )
                           {
                             OBTetrahedralStereo::Config cfg = tetStereo_cit->second;
                             OBStereo::Refs refs = cfg.refs;
                             vector<string> atomrefs;
-                            atomrefs.push_back(atomIds[mol.GetAtomById(cfg.from)->GetIdx()]);
+                            // According to http://cml.sourceforge.net/schema/cmlCore/HTMLDOCS/cmlCore.pdf,
+                            // "if there are only 3 ligands, the current atom should be included
+                            //  in the 4 atomRefs.".
+                            if (cfg.from == OBStereo::ImplicitRef) // e.g. for [S@@](Cl)(Br)I
+                                atomrefs.push_back(atomIds[mol.GetAtomById(cfg.center)->GetIdx()]); // Add the central atom again
+                              else
+                                atomrefs.push_back(atomIds[mol.GetAtomById(cfg.from)->GetIdx()]);
+
                             for (OBStereo::RefIter ref = refs.begin(); ref!=refs.end(); ++ref) {
-                              // According to http://cml.sourceforge.net/schema/cmlCore/HTMLDOCS/cmlCore.pdf,
-                              // "if there are only 3 ligands, the current atom should be included
-                              //  in the 4 atomRefs.".
-                              if ( (OBStereo::Ref)*ref == OBStereo::ImplicitRef) // e.g. for [N@@](C1)(C2)C(C2)CC1
-                                atomrefs.push_back(atomIds[mol.GetAtomById(cfg.center)->GetIdx()]); // Add the from atom again
-                              else                                
+                              if ( (OBStereo::Ref)*ref == OBStereo::ImplicitRef) // e.g. for Cl[S@@](Br)I
+                                atomrefs.push_back(atomIds[mol.GetAtomById(cfg.center)->GetIdx()]); // Add the central atom again
+                              else
                                 atomrefs.push_back(atomIds[mol.GetAtomById(*ref)->GetIdx()]);
                             }
 
@@ -1588,7 +1597,7 @@ namespace OpenBabel
                               atomrefs[2].c_str(), atomrefs[3].c_str());
                             // Set the atomParity - this is always 1 as the atomRefs are arranged
                             // to make this so
-                            xmlTextWriterWriteFormatString(writer(), "%d", 1); 
+                            xmlTextWriterWriteFormatString(writer(), "%d", 1);
                             xmlTextWriterEndElement(writer());//atomParity
                           }
                       }
@@ -1641,14 +1650,14 @@ namespace OpenBabel
                     xmlTextWriterEndElement(writer());//atom
                   }
               }
-		
+
             if(arrayform)
               {
                 if(!cml1)
                   {
                     xmlTextWriterWriteFormatAttribute(writer(), C_ATOMID,"%s", id.str().c_str());
                     xmlTextWriterWriteFormatAttribute(writer(), C_ELEMENTTYPE,"%s", eltyp.str().c_str());
-					
+
                     if(anyIsotope)
                       xmlTextWriterWriteFormatAttribute(writer(), C_ISOTOPE,"%s", iso.str().c_str());
 
@@ -1720,7 +1729,7 @@ namespace OpenBabel
                         xmlTextWriterWriteFormatAttribute(writer(), C_BUILTIN,"%s%d", "z",dim);
                         xmlTextWriterWriteFormatString(writer(),"%s", z.str().c_str());
                         xmlTextWriterEndElement(writer());
-                      }			
+                      }
                   }
               }
             xmlTextWriterEndElement(writer());//atomArray
@@ -1771,7 +1780,7 @@ namespace OpenBabel
                     xmlTextWriterWriteFormatAttribute(writer(), C_ATOMREFS2,"%s %s",
                           ref1.c_str(), ref2.c_str());
                     xmlTextWriterWriteFormatAttribute(writer(), C_ORDER,"%s", ord.str().c_str());
-                    
+
                     if(pbond->HasData("color"))
                       xmlTextWriterWriteFormatAttribute(writer(), C_COLOR,"%s",
                           pbond->GetData("color")->GetValue().c_str());
@@ -1906,7 +1915,7 @@ namespace OpenBabel
   void CMLFormat::MakeAtomIds(OBMol& mol, vector<string>& atomIDs)
   {
     /* If there is no atom class data for the atom, the id is a followed by the atom index.
-       If there is atom class data then it is aa followed by the atom class. 
+       If there is atom class data then it is aa followed by the atom class.
        If a subsequent atom has the same atom class, its id is ab followed
        by the atom class, and so on. */
 
@@ -1951,7 +1960,7 @@ namespace OpenBabel
   {
     static const xmlChar C_ATOMREFS4[]  = "atomRefs4";
     static const xmlChar C_BONDSTEREO[] = "bondStereo";
-  
+
     char ch=0;
     if(pbond->IsWedge())
       ch='W';
@@ -1992,7 +2001,7 @@ namespace OpenBabel
         }
       if(!ud1 || !ud2)
         return;
-  	
+
       xmlTextWriterStartElementNS(writer(), prefix, C_BONDSTEREO, NULL);
       xmlTextWriterWriteFormatAttribute(writer(), C_ATOMREFS4, "%s %s %s %s",
 //                        "a%d a%d a%d a%d", idx1, patomA->GetIdx(), patomB->GetIdx(), idx2);
@@ -2086,7 +2095,7 @@ namespace OpenBabel
 	      }
 	  }
 
-    xmlTextWriterEndElement(writer());//crystal	
+    xmlTextWriterEndElement(writer());//crystal
   }
 
   void CMLFormat::WriteProperties(OBMol& mol, bool& propertyListWritten)
@@ -2096,7 +2105,7 @@ namespace OpenBabel
     static const xmlChar C_PROPERTY[]     = "property";
     static const xmlChar C_SCALAR[]       = "scalar";
     static const xmlChar C_TITLE[]        = "title";
-    
+
     vector<OBGenericData*>::iterator k;
     vector<OBGenericData*> vdata = mol.GetData();
     for (k = vdata.begin();k != vdata.end();k++)
@@ -2115,7 +2124,7 @@ namespace OpenBabel
             xmlTextWriterStartElementNS(writer(), prefix, C_PROPERTY, NULL);
             //Title is now on <property>. If the attribute name has a namespace, use dictRef instead.
             string att((*k)->GetAttribute());
-            xmlTextWriterWriteFormatAttribute(writer(), 
+            xmlTextWriterWriteFormatAttribute(writer(),
               (att.find(':')==string::npos) ? C_TITLE : C_DICTREF,
               "%s",att.c_str());
             xmlTextWriterStartElementNS(writer(), prefix, C_SCALAR, NULL);
@@ -2130,9 +2139,9 @@ namespace OpenBabel
 
     static const double CALSTOJOULES = 4.1816;
     //Energy is output when it is not zero
-    //This is the molecular energy, probably originally in Hartrees, 
+    //This is the molecular energy, probably originally in Hartrees,
     // stored in OB as kcal/mol, but output here in kJ/mol
-    if(mol.GetEnergy()<-1e-3)//will be negative if assigned     
+    if(mol.GetEnergy()<-1e-3)//will be negative if assigned
       WriteScalarProperty(mol, "Energy", mol.GetEnergy() * CALSTOJOULES,
         "me:ZPE", "kJ/mol", "computational");
 
@@ -2166,7 +2175,7 @@ namespace OpenBabel
 
     xmlTextWriterStartElementNS(writer(), prefix, C_PROPERTY, NULL);
     xmlTextWriterWriteFormatAttribute(writer(), C_DICTREF,"%s","Thermo_OldNasa");
-	
+
     xmlTextWriterStartElementNS(writer(), prefix, C_SCALAR, NULL);
     xmlTextWriterWriteFormatAttribute(writer(), C_DICTREF,"%s","NasaLowT");
     xmlTextWriterWriteFormatString(writer(),"%.1f", pThermoData->GetLoT());
@@ -2197,7 +2206,7 @@ namespace OpenBabel
     xmlTextWriterEndElement(writer());//property
   }
 
-  ///Returns molecule title or molecule number if there is no title together with the file name 
+  ///Returns molecule title or molecule number if there is no title together with the file name
   string CMLFormat::GetMolID()
   {
     stringstream molID;
@@ -2205,7 +2214,7 @@ namespace OpenBabel
       molID << "Mol #" << _pxmlConv->GetOutputIndex()+1;
     else
       molID << _pmol->GetTitle();
-	
+
     string fn(_pxmlConv->GetInFilename());
     //Get file name: remove path
     string::size_type pos = fn.rfind(DLHandler::getSeparator());
@@ -2268,7 +2277,7 @@ namespace OpenBabel
 
     if(imaginaryFrequency>0.0)
       WriteScalarProperty(mol, "ImaginaryFrequency", imaginaryFrequency, "me:imFreqs", "cm-1");
-    
+
     return true;
   }
 
@@ -2307,7 +2316,7 @@ namespace OpenBabel
   }
 
 
-  bool CMLFormat::WriteScalarProperty(OBMol& mol, 
+  bool CMLFormat::WriteScalarProperty(OBMol& mol,
     const char* title, double value, const char* dictref, const char* units, const char* convention)
   {
     static const xmlChar C_PROPERTY[]     = "property";
@@ -2351,7 +2360,5 @@ namespace OpenBabel
     delete pOb;
     return ret;
   }
-
-
 
 }//namespace

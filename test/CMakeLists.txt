@@ -12,14 +12,17 @@ set(tests
     automorphism
     builder
     canonconsistent
+    canonstable
     cistrans
     confsearch
     divposes
     dummy
     graphsym
+    implicitH
     lssr
     isomorphism
     rotor
+    shuffle
     smiles
     spectrophore
     squareplanar
@@ -66,9 +69,12 @@ set(old_tests
     atom
     bond
     cansmi
+    charge-mmff94
+    charge-gasteiger
     cmlreadfile
     conversion
     datatest
+    ffgaff
     ffghemical
     ffmmff94
     ffuff

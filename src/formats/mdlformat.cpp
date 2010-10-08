@@ -45,18 +45,25 @@ namespace OpenBabel
   {
     public:
       virtual const char* Description()
-      { 
+      {
         return "MDL MOL format\n"
                "Reads and writes V2000 and V3000 versions\n"
                "Read Options, e.g. -as\n"
-               " s  determine stereochemistry from atom flags\n"
-               " T  read title only\n\n"
+               " s  determine chirality from atom parity flags\n"
+               "       This is valid only for 0D information. Atom\n"
+               "       parity is always ignored on reading for MOL files\n"
+               "       containing 2D or 3D information.\n"
+               " T  read title only\n"
+               " P  read title and properties only\n"
+               "       When filtering an sdf file on title or properties\n"
+               "       only, avoid lengthy chemical interpretation by\n"
+               "       using the T or P option together with copy format.\n\n"
+
                "Write Options, e.g. -x3\n"
-            /* " 2  output V2000 (default) or\n" */
                " 3  output V3000 not V2000 (used for >999 atoms/bonds) \n"
                " m  write no properties\n"
                " w  recalculate wedge and hash bonds(2D structures only)\n"
-               " A  output in Alias form, e.g. Ph, if present\n\n"; 
+               " A  output in Alias form, e.g. Ph, if present\n\n";
       }
 
       virtual const char* SpecificationURL()
@@ -64,9 +71,9 @@ namespace OpenBabel
         return "http://www.mdl.com/downloads/public/ctfile/ctfile.jsp";
       }
 
-      virtual const char* GetMIMEType() 
-      { 
-        return "chemical/x-mdl-molfile"; 
+      virtual const char* GetMIMEType()
+      {
+        return "chemical/x-mdl-molfile";
       }
 
       virtual unsigned int Flags() { return DEFAULTFORMAT | ZEROATOMSOK; }
@@ -74,11 +81,11 @@ namespace OpenBabel
 
       virtual int SkipObjects(int n, OBConversion* pConv)
       {
-        if (n == 0) 
+        if (n == 0)
           n++;
         istream& ifs = *pConv->GetInStream();
         do {
-         ignore(ifs, "$$$$\n");   
+         ignore(ifs, "$$$$\n");
         } while(ifs && --n);
         return ifs.good() ? 1 : -1;
       }
@@ -98,6 +105,7 @@ namespace OpenBabel
       bool ReadCollectionBlock(istream& ifs,OBMol& mol, OBConversion* pConv);
       bool ReadRGroupBlock(istream& ifs,OBMol& mol, OBConversion* pConv);
       bool WriteV3000(ostream& ofs,OBMol& mol, OBConversion* pConv);
+      void ReadPropertyLines(istream& ifs, OBMol& mol);
     private:
       enum Parity {
         NotStereo, Clockwise, AntiClockwise, Unknown
@@ -118,7 +126,7 @@ namespace OpenBabel
   {
     public:
       //Register this format type ID
-      MOLFormat() 
+      MOLFormat()
       {
         OBConversion::RegisterFormat("mol",this, "chemical/x-mdl-molfile");
         OBConversion::RegisterFormat("mdl",this, "chemical/x-mdl-molfile");
@@ -126,7 +134,7 @@ namespace OpenBabel
         OBConversion::RegisterOptionParam("3", this);
       }
   };
-  
+
   //Make an instance of the format class
   MOLFormat theMOLFormat;
 
@@ -168,14 +176,15 @@ namespace OpenBabel
     string comment;
     string r1, r2;
     map<OBBond*, OBStereo::BondDirection> updown;
+    vector<Parity> parities;
     vector<pair<AliasData*,OBAtom*> > aliases;
 
     // Attempting to read past the end of the file -- don't bother
-    if ( !ifs.good() || ifs.peek() == EOF ) 
+    if ( !ifs.good() || ifs.peek() == EOF )
       return false;
 
     std::string line;
-    // 
+    //
     // The Header Block
     //
 
@@ -186,10 +195,10 @@ namespace OpenBabel
       obErrorLog.ThrowError(__FUNCTION__, errorMsg.str() , obWarning);
       return(false);
     }
-    
+
     //Do not interpret a single (usually blank) line at end of file as
     //another molecule giving an unnecessary error message.
-    if ( !ifs.good() || ifs.peek() == EOF ) 
+    if ( !ifs.good() || ifs.peek() == EOF )
       return false;
 
     mol.SetTitle(line);
@@ -198,6 +207,15 @@ namespace OpenBabel
     {
       //Read title only
       SkipObjects(0, pConv);
+      return true;
+    }
+
+    if(pConv->IsOption("P",OBConversion::INOPTIONS))
+    {
+      //Read Title and Property lines only
+      ignore(ifs, "M  END");
+      ifs.ignore(100,'\n');
+      ReadPropertyLines(ifs, mol);//also reads $$$$
       return true;
     }
 
@@ -217,13 +235,13 @@ namespace OpenBabel
       obErrorLog.ThrowError(__FUNCTION__, errorMsg.str() , obWarning);
       return false;
     }
-    
+
     if (line.size() > 21) {
       string dim = line.substr(20, 2);
       if (dim == "3D") {
         mol.SetDimension(3);
         setDimension = true;
-      } else 
+      } else
       if (dim == "2D") {
         mol.SetDimension(2);
         setDimension = true;
@@ -278,7 +296,7 @@ namespace OpenBabel
     if(line.find("V3000") != string::npos) {
       // V3000
       indexmap.clear();
-      if(!ReadV3000Block(ifs, mol, pConv, false)) 
+      if(!ReadV3000Block(ifs, mol, pConv, false))
         return false;
       //ifs.getline(buffer,BUFF_SIZE); //M END line
     } else {
@@ -311,7 +329,7 @@ namespace OpenBabel
         // 39..41   sss = atom stereo parity (ignored)
         //          ... = query/reaction related
         massdiff = charge = 0;
-        parity = NotStereo; 
+        parity = NotStereo;
         if (line.size() < 34) {
 	        errorMsg << "WARNING: Problems reading a MDL file\n";
 	        errorMsg << "Missing data following atom specification in atom block\n";
@@ -335,10 +353,29 @@ namespace OpenBabel
         if (line.size() >= 35)
           massdiff = ReadIntField(line.substr(34, 2).c_str());
         massDiffs.push_back(massdiff);
-        // charge      
+        // charge
         if (line.size() >= 38)
           charge = ReadIntField(line.substr(36, 3).c_str());
         charges.push_back(charge);
+        // stereo parity
+        if (line.size() >= 41) {
+          stereo = ReadUIntField(line.substr(39, 3).c_str());
+          switch (stereo) {
+            case 1:
+              parity = Clockwise;
+              break;
+            case 2:
+              parity = AntiClockwise;
+              break;
+            case 3:
+              parity = Unknown;
+              break;
+            default:
+              parity = NotStereo;
+              break;
+          }
+        }
+        parities.push_back(parity);
 
         if (!mol.AddAtom(atom))
           return false;
@@ -416,7 +453,7 @@ namespace OpenBabel
         if (stereo) {
           OBStereo::BondDirection bd;
           switch (stereo) {
-            case 1: 
+            case 1:
               bd = OBStereo::UpBond;
               break;
             case 6:
@@ -438,8 +475,8 @@ namespace OpenBabel
         }
       }
 
-      // 
-      // Properties Block 
+      //
+      // Properties Block
       //
       bool foundISO = false, foundCHG = false;
       while (std::getline(ifs, line)) {
@@ -548,54 +585,23 @@ namespace OpenBabel
 
     mol.AssignSpinMultiplicity();
     mol.EndModify();
-        
+
     if (comment.length()) {
       OBCommentData *cd = new OBCommentData;
       cd->SetData(comment);
       cd->SetOrigin(fileformatInput);
       mol.SetData(cd);
     }
-        
+
     //Get property lines
-    while (std::getline(ifs, line)) {
-      if (line.find("<") != string::npos) {
-        size_t lt = line.find("<")+1;
-        size_t rt = line.find_last_of(">");
-        string attr = line.substr(lt, rt - lt);
-
-        // sometimes we can hit more data than BUFF_SIZE, so we'll use a std::string
-        string buff;
-        while (std::getline(ifs, line)) {
-          Trim(line);
-          if (line.size()) {
-            buff.append(line);
-            buff += "\n";
-          } else
-            break;
-        }
-        Trim(buff);
-
-        OBPairData *dp = new OBPairData;
-        dp->SetAttribute(attr);
-        dp->SetValue(buff);
-        dp->SetOrigin(fileformatInput);
-        mol.SetData(dp);
-            
-        if(!strcasecmp(attr.c_str(),"NAME") && *mol.GetTitle()=='\0')
-          mol.SetTitle(buff);
-      }
-      if (line.substr(0, 4) ==  "$$$$") 
-        break;
-      if (line.substr(0, 4) == "$MOL") 
-        break;
-    }
+    ReadPropertyLines(ifs, mol);
 
     if (mol.Has3D()) {
       if (!setDimension)
         mol.SetDimension(3);
       // use 3D coordinates to determine stereochemistry
       StereoFrom3D(&mol);
-    } else 
+    } else
     if (mol.Has2D()) {
       if (!setDimension)
         mol.SetDimension(2);
@@ -604,8 +610,28 @@ namespace OpenBabel
     } else { // 0D
       if (!setDimension)
         mol.SetDimension(0);
-      // The 0D format does not store stereochemistry
+      // The 0D format is not considered to store stereochemistry, but
+      // if you specify the "s" option, then atom parities from the
+      // MOL file will be used to create tetrahedral stereochemistry
+      if (pConv->IsOption("s", OBConversion::INOPTIONS))
+        TetStereoFromParity(mol, parities);
       StereoFrom0D(&mol);
+    }
+
+    // For unspecified cis/trans stereos, set their Configs to unspecified
+    map<OBBond*, OBStereo::BondDirection>::const_iterator bd_it;
+    OpenBabel::OBStereoFacade facade(&mol);
+    for(bd_it=updown.begin(); bd_it!=updown.end(); ++bd_it) {
+      OBBond* bond = bd_it->first;
+      if (bond->GetBondOrder()!=2 || bd_it->second != OBStereo::UnknownDir)
+        continue; // Only continue for those double bonds with UnknownDir
+
+      OBCisTransStereo* ct = facade.GetCisTransStereo(bond->GetId());
+      if (ct) {
+        OBCisTransStereo::Config config = ct->GetConfig();
+        config.specified = false;
+        ct->SetConfig(config);
+      }
     }
 
     return true;
@@ -628,7 +654,7 @@ namespace OpenBabel
     if (pConv->GetOutputIndex()==1)
       HasProperties = false;
 
-    // 
+    //
     // Header Block
     //
 
@@ -648,20 +674,20 @@ namespace OpenBabel
     // line 3: comment
     if (mol.HasData(OBGenericDataType::CommentData)) {
       OBCommentData *cd = (OBCommentData*)mol.GetData(OBGenericDataType::CommentData);
-      ofs << cd->GetData(); 
-    } 
+      ofs << cd->GetData();
+    }
     ofs << endl;
-       
+
     //
     // Atom Block
     //
 
     if(pConv->IsOption("3") || mol.NumAtoms() > 999 || mol.NumBonds() > 999) {
-      if (!WriteV3000(ofs, mol, pConv)) 
+      if (!WriteV3000(ofs, mol, pConv))
         return false;
     } else {
       //The rest of the function is the same as the original
-      char buff[BUFF_SIZE];  
+      char buff[BUFF_SIZE];
 
       if (mol.NumAtoms() > 999 || mol.NumBonds() > 999) { // Three digits!
         stringstream errorMsg;
@@ -694,7 +720,7 @@ namespace OpenBabel
       GetParity(mol, parity);
       if (mol.GetDimension() == 3 || (mol.GetDimension()==2 && pConv->IsOption("w", pConv->OUTOPTIONS)!=NULL))
         TetStereoTo0D(mol, updown, from);
-                      
+
       // The counts line:
       // aaabbblllfffcccsssxxxrrrpppiiimmmvvvvvv
       //
@@ -710,7 +736,7 @@ namespace OpenBabel
 
       OBAtom *atom;
       vector<OBAtom*>::iterator i;
-      int charge = 0; 
+      int charge = 0;
       for (atom = mol.BeginAtom(i); atom; atom = mol.NextAtom(i)) {
         // convert charge
         switch (atom->GetFormalCharge()) {
@@ -734,7 +760,7 @@ namespace OpenBabel
 //       snprintf(buff, BUFF_SIZE, "%10.4f%10.4f%10.4f %-3s%2d%3d%3d%3d%3d",
 //                 atom->GetX(), atom->GetY(), atom->GetZ(),
 //                 atom->GetAtomicNum() ? etab.GetSymbol(atom->GetAtomicNum()) : "* ",
-//                 0, charge, stereo, 0, 0);    
+//                 0, charge, stereo, 0, 0);
           ofs << buff << endl;
         }
 
@@ -753,9 +779,9 @@ namespace OpenBabel
                  (from_cit!=from.end() && from_cit->second == atom->GetId()) ) {
               int stereo = 0;
               if(mol.GetDimension() == 2 && !pConv->IsOption("w", pConv->OUTOPTIONS)) {
-                if (bond->IsWedge()) 
+                if (bond->IsWedge())
                   stereo = 1;
-                else if (bond->IsHash()) 
+                else if (bond->IsHash())
                   stereo = 6;
                 else if (bond->IsWedgeOrHash())
                   stereo = 4;
@@ -801,12 +827,12 @@ namespace OpenBabel
 	  for(itr=rads.begin();itr!=rads.end();++itr, counter++) {
 	    if (counter % 8 == 0) {
 	      if (counter > 0) ofs << endl;
-	      ofs << "M  RAD" << setw(3) << min(static_cast<unsigned long int>(rads.size() - counter), static_cast<unsigned long int>(8));		
+	      ofs << "M  RAD" << setw(3) << min(static_cast<unsigned long int>(rads.size() - counter), static_cast<unsigned long int>(8));
 	    }
 	    ofs << setw(4) << (*itr)->GetIdx() << setw(4) << (*itr)->GetSpinMultiplicity();
 	  }
 	  ofs << endl;
-	}                     
+	}
         if(isos.size()) {
 	  int counter = 0;
 	  for(itr=isos.begin();itr!=isos.end();++itr, counter++) {
@@ -817,7 +843,7 @@ namespace OpenBabel
 	    ofs << setw(4) << (*itr)->GetIdx() << setw(4) << (*itr)->GetIsotope();
 	  }
 	  ofs << endl;
-	}                     
+	}
         if(chgs.size()) {
 	  int counter = 0;
 	  for (itr=chgs.begin(); itr != chgs.end(); ++itr, counter++) {
@@ -854,12 +880,12 @@ namespace OpenBabel
               }
           }
       }
-        
+
     //Unless option no$$$$ is set, $$$$ is always written between molecules and
     //at the end any if properties have been output in any molecule,
     //or if the sd option is set.
     if(!pConv->IsOption("no$$$$"))
-      if(!pConv->IsLast()  || HasProperties  || pConv->IsOption("sd"))  
+      if(!pConv->IsLast()  || HasProperties  || pConv->IsOption("sd"))
         ofs << "$$$$" << endl;
 
     return(true);
@@ -882,11 +908,11 @@ namespace OpenBabel
             if(!ReadV3000Line(ifs,vs) || vs[2]!="COUNTS") return false;
             int natoms = ReadUIntField(vs[3].c_str());
             //int nbonds = ReadUIntField(vs[4].c_str());
-            //int chiral = ReadUIntField(vs[7].c_str()); 
+            //int chiral = ReadUIntField(vs[7].c_str());
             //number of s groups, number of 3D contraints, chiral flag and regno not yet implemented
             mol.ReserveAtoms(natoms);
 
-            ReadV3000Block(ifs,mol,pConv,true);//go for contained blocks        
+            ReadV3000Block(ifs,mol,pConv,true);//go for contained blocks
             if(vs[2]!="END" && vs[3]!="CTAB") return false;
             ret= true;
           }
@@ -897,8 +923,8 @@ namespace OpenBabel
         else if(vs[3]=="COLLECTION")
           ret = ReadCollectionBlock(ifs,mol,pConv);
         else if(vs[3]=="RGROUP")
-          ret = ReadRGroupBlock(ifs,mol,pConv);         
-          
+          ret = ReadRGroupBlock(ifs,mol,pConv);
+
         /*
           else if(vs[3]=="3D")
           //not currently implemented
@@ -919,7 +945,7 @@ namespace OpenBabel
     tokenize(vs,buffer," \t\n\r");
     if (vs.size() < 2) return false; // timvdm 18/06/2008
     if(vs[0]!="M" || (vs[1]!="V30" && vs[1]!="END")) return false;
-        
+
     if(buffer[strlen(buffer)-1] == '-') //continuation char
       {
         //Read continuation line iteratively and add parsed tokens (without M V30) to vs
@@ -932,7 +958,7 @@ namespace OpenBabel
 
   //////////////////////////////////////////////////////
   bool MDLFormat::ReadAtomBlock(istream& ifs,OBMol& mol, OBConversion* pConv)
-  {     
+  {
     OBAtom atom;
     bool chiralWatch=false;
     int obindex;
@@ -940,7 +966,7 @@ namespace OpenBabel
       {
         if(!ReadV3000Line(ifs,vs)) return false;
         if(vs[2]=="END") break;
-                
+
         indexmap[ReadUIntField(vs[2].c_str())] = obindex;
         atom.SetVector(atof(vs[4].c_str()), atof(vs[5].c_str()), atof(vs[6].c_str()));
         //      if(abs(atof(vs[6].c_str()))>0)is3D=true;
@@ -950,7 +976,7 @@ namespace OpenBabel
         strncpy(type,vs[3].c_str(),4);
         if(!strcmp(type, "R#"))
           {
-          obErrorLog.ThrowError(__FUNCTION__, 
+          obErrorLog.ThrowError(__FUNCTION__,
             "A molecule contains an R group which are not currently implemented"
             , obWarning, onceOnly);
           atom.SetAtomicNum(0);
@@ -963,7 +989,7 @@ namespace OpenBabel
             atom.SetIsotope(iso);
           atom.SetType(type); //takes a char not a const char!
           //mapping vs[7] not implemented
-                  
+
           //Atom properties
           vector<string>::iterator itr;
           for(itr=vs.begin()+8;itr!=vs.end();itr++)
@@ -1002,7 +1028,7 @@ namespace OpenBabel
               //Several query properties unimplemented
               //Unknown properties ignored
             }
-          }        
+          }
         if(!mol.AddAtom(atom)) return false;
         /*
         if(chiralWatch)
@@ -1020,7 +1046,7 @@ namespace OpenBabel
       {
         if(!ReadV3000Line(ifs,vs)) return false;
         if(vs[2]=="END") break;
-                
+
         unsigned flag=0;
 
         int order = ReadUIntField(vs[3].c_str());
@@ -1039,18 +1065,18 @@ namespace OpenBabel
             if((*itr).substr(0,pos)=="CFG")
               {
                 //@todo Bond Configuration 2 or 3D??
-                if (val == 1) 
+                if (val == 1)
                   {
                     flag |= OB_WEDGE_BOND;
                   }
-                else if (val == 3) 
+                else if (val == 3)
                   {
                     flag |= OB_HASH_BOND;
                   }
               }
           }
         if (!mol.AddBond(obstart,obend,order,flag)) return false;
-         
+
         /*
         // after adding a bond to atom "obstart"
         // search to see if atom is bonded to a chiral atom
@@ -1076,7 +1102,7 @@ namespace OpenBabel
   bool MDLFormat::ReadCollectionBlock(istream& ifs,OBMol& mol, OBConversion* pConv)
   {
     //Not currently implemented
-    obErrorLog.ThrowError(__FUNCTION__, 
+    obErrorLog.ThrowError(__FUNCTION__,
       "COLLECTION blocks are not currently implemented and their contents are ignored.", obWarning, onceOnly);
     for(;;)
     {
@@ -1092,7 +1118,7 @@ namespace OpenBabel
   bool MDLFormat::ReadRGroupBlock(istream& ifs,OBMol& mol, OBConversion* pConv)
   {
     //Not currently implemented
-    obErrorLog.ThrowError(__FUNCTION__, 
+    obErrorLog.ThrowError(__FUNCTION__,
       "RGROUP and RLOGIC blocks are not currently implemented and their contents are ignored.",
       obWarning, onceOnly);
     for(;;)
@@ -1118,19 +1144,19 @@ namespace OpenBabel
             break;
           }
       }
-  
-  
+
+
     ofs << "  0  0  0     0  0            999 V3000" << endl; //line 4
     ofs << "M  V30 BEGIN CTAB" <<endl;
-    ofs << "M  V30 COUNTS " << mol.NumAtoms() << " " << mol.NumBonds() 
+    ofs << "M  V30 COUNTS " << mol.NumAtoms() << " " << mol.NumBonds()
         << " 0 0 " << mol.IsChiral() << endl;
-        
+
     ofs << "M  V30 BEGIN ATOM" <<endl;
     OBAtom *atom;
     int index=1;
     vector<OBAtom*>::iterator i;
     for (atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i))
-      {  
+      {
         ofs     << "M  V30 "
                 << index++ << " "
                 << etab.GetSymbol(atom->GetAtomicNum()) << " "
@@ -1146,7 +1172,7 @@ namespace OpenBabel
         if(atom->IsChiral())
           {
             // MOLV3000 uses 1234 unless an H then 123H
-         
+
             OBChiralData* cd=(OBChiralData*)atom->GetData(OBGenericDataType::ChiralData);
             if(!cd){ //if no Chiral Data Set, need to make one!
               cd=new OBChiralData;
@@ -1155,7 +1181,7 @@ namespace OpenBabel
             if (atom->GetHvyValence()==3)
               {
                 OBAtom *nbr;
-                int Hid = (mol.NumAtoms()+1) ;// max Atom ID +1 
+                int Hid = (mol.NumAtoms()+1) ;// max Atom ID +1
                 vector<unsigned int> nbr_atms;
                 vector<OBBond*>::iterator i;
                 for (nbr = atom->BeginNbrAtom(i);nbr;nbr = atom->NextNbrAtom(i))
@@ -1165,16 +1191,16 @@ namespace OpenBabel
                   }
                 sort(nbr_atms.begin(),nbr_atms.end());
                 nbr_atms.push_back(Hid);
-                cd->SetAtom4Refs(nbr_atms,output);   
-              } 
+                cd->SetAtom4Refs(nbr_atms,output);
+              }
             else if (atom->GetHvyValence()==4)
               {
                 vector<unsigned int> nbr_atms;
                 int n;
                 for(n=1;n<5;n++)nbr_atms.push_back(n);
-                cd->SetAtom4Refs(nbr_atms,output); 
+                cd->SetAtom4Refs(nbr_atms,output);
               }
-            double vol=0;         
+            double vol=0;
             if (mol.HasNonZeroCoords())
               {
                 vol=CalcSignedVolume(mol,atom);
@@ -1182,14 +1208,14 @@ namespace OpenBabel
                 else if(vol < 0.0)atom->SetAntiClockwiseStereo();
                 CorrectChirality(mol,atom,calcvolume,output);
               }
-            else {            
+            else {
               CorrectChirality(mol,atom); // will set the stereochem based on input/output atom4refs
             }
 
             int cfg=3; // if we don't know, then it's unspecified
             if(atom->IsClockwise())cfg=1;
             else if(atom->IsAntiClockwise())cfg=2;
-                        
+
             ofs << " CFG=" << cfg;
           }
         */
@@ -1239,8 +1265,8 @@ namespace OpenBabel
     struct tm* ts;
     time_t long_time;
     time( &long_time );
-    ts = localtime( &long_time ); 
-    snprintf(td, 11, "%02d%02d%02d%02d%02d", ts->tm_mon+1, ts->tm_mday, 
+    ts = localtime( &long_time );
+    snprintf(td, 11, "%02d%02d%02d%02d%02d", ts->tm_mon+1, ts->tm_mday,
              ((ts->tm_year>=100)? ts->tm_year-100 : ts->tm_year),
              ts->tm_hour, ts->tm_min);
     return string(td);
@@ -1253,7 +1279,7 @@ namespace OpenBabel
     for (std::vector<OBGenericData*>::iterator data = vdata.begin(); data != vdata.end(); ++data)
       if (((OBStereoBase*)*data)->GetType() == OBStereo::Tetrahedral) {
         OBTetrahedralStereo *ts = dynamic_cast<OBTetrahedralStereo*>(*data);
-        
+
         OBTetrahedralStereo::Config cfg = ts->GetConfig();
 
         Parity atomparity = Unknown;
@@ -1262,12 +1288,12 @@ namespace OpenBabel
           // clockwise, parity is 1 (Parity::Clockwise)
           OBStereo::Refs refs = cfg.refs;
           unsigned long maxref = std::max(*(std::max_element(refs.begin(), refs.end())), cfg.from);
-          
+
           // Get a new cfg and refs looking towards the maxref
           cfg = ts->GetConfig(maxref, OBStereo::Clockwise, OBStereo::ViewTowards);
           int inversions = OBStereo::NumInversions(cfg.refs);
-          
-          // If they were in increasing order, inversions would be 0 or some even value      
+
+          // If they were in increasing order, inversions would be 0 or some even value
           if (inversions % 2 == 0)
             atomparity = Clockwise;
           else
@@ -1278,7 +1304,7 @@ namespace OpenBabel
   }
 
   void MDLFormat::TetStereoFromParity(OBMol& mol, vector<MDLFormat::Parity> &parity)
-  { // Not used...
+  {
     for (unsigned long i=0;i<parity.size();i++) {
       if (parity[i] == NotStereo)
         continue;
@@ -1321,6 +1347,43 @@ namespace OpenBabel
     int n = strtoul(s, &end, 10);
     if (*end != '\0' && *end != ' ') return 0;
     return n;
+  }
+
+  void MDLFormat::ReadPropertyLines(istream& ifs, OBMol& mol)
+  {
+    string line;
+    while (std::getline(ifs, line)) {
+      if (line.find("<") != string::npos) {
+        size_t lt = line.find("<")+1;
+        size_t rt = line.find_last_of(">");
+        string attr = line.substr(lt, rt - lt);
+
+        // sometimes we can hit more data than BUFF_SIZE, so we'll use a std::string
+        string buff;
+        while (std::getline(ifs, line)) {
+          Trim(line);
+          if (line.size()) {
+            buff.append(line);
+            buff += "\n";
+          } else
+            break;
+        }
+        Trim(buff);
+
+        OBPairData *dp = new OBPairData;
+        dp->SetAttribute(attr);
+        dp->SetValue(buff);
+        dp->SetOrigin(fileformatInput);
+        mol.SetData(dp);
+
+        if(!strcasecmp(attr.c_str(),"NAME") && *mol.GetTitle()=='\0')
+          mol.SetTitle(buff);
+      }
+      if (line.substr(0, 4) ==  "$$$$")
+        break;
+      if (line.substr(0, 4) == "$MOL")
+        break;
+    }
   }
 
   //! Calculate the "sign of a triangle" given by a set of 3 2D coordinates

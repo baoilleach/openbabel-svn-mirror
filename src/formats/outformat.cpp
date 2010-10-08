@@ -1,11 +1,11 @@
 /**********************************************************************
 Copyright (C) 2001-2008 by Geoffrey R. Hutchison
 Some portions Copyright (C) 2004 by Chris Morley
- 
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation version 2 of the License.
- 
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -22,7 +22,7 @@ namespace OpenBabel
 {
 
   // The ".out" format:
-  // Detect GAMESS, Q-Chem, PWSCF, Gaussian, or MOPAC output files
+  // Detect GAMESS, GAMESS-UK, Q-Chem, PWSCF, Gaussian, or MOPAC output files
   class OutputFormat : public OBMoleculeFormat
   {
   public:
@@ -75,61 +75,83 @@ namespace OpenBabel
     istream &ifs = *pConv->GetInStream();
     char buffer[BUFF_SIZE];
     OBFormat *pFormat = NULL;
+    std::string formatName;
 
     // the detection strings are from the Chemical MIME project
     // http://chemical-mime.sourceforge.net/chemical-mime-data.html
     while (ifs.getline(buffer,BUFF_SIZE)) {
       if ((strstr(buffer,"GAMESS execution script") != NULL) ||
-          (strstr(buffer,"PC GAMESS") != NULL)) {
+          (strstr(buffer,"PC GAMESS") != NULL) ||
+          (strstr(buffer,"GAMESS VERSION") != NULL)) {
         // GAMESS output
-        pFormat = pConv->FindFormat("gamout");
+        formatName = "gamout";
+        break;
+      } else if (strstr(buffer,"===  G A M E S S - U K    === ") != NULL) {
+        // GAMESS-UK output
+        formatName = "gukout";
         break;
       } else if (strstr(buffer,"Gaussian, Inc") != NULL) {
         // Gaussian output
-        pFormat = pConv->FindFormat("g03");
+        formatName = "g03";
         break;
       } else if (strstr(buffer,"GENERAL UTILITY LATTICE PROGRAM") != NULL) {
         // GULP output -- not currently supported
-        continue;
+        break;
       } else if (strstr(buffer,"MOPAC") != NULL) {
         // MOPAC output
-        pFormat = pConv->FindFormat("mopout");
+        formatName = "mopout";
         break;
       } else if (strstr(buffer,"Program PWSCF") != NULL) {
         // PWSCF
-        pFormat = pConv->FindFormat("pwscf");
+        formatName = "pwscf";
         break;
       } else if (strstr(buffer,"Welcome to Q-Chem") != NULL) {
         // Q-Chem output
-        pFormat = pConv->FindFormat("qcout");
+        formatName = "qcout";
         break;
       } else if (strstr(buffer,"Amsterdam Density Functional") != NULL) {
         // ADF output
-        pFormat = pConv->FindFormat("adfout");
+        formatName = "adfout";
         break;
       } else if (strstr(buffer,"Northwest Computational Chemistry") != NULL) {
         // NWChem output
-        pFormat = pConv->FindFormat("nwo");
+        formatName = "nwo";
         break;
       } else if (strstr(buffer,"MPQC: Massively Parallel Quantum Chemistry") != NULL) {
         // MPQC output
-        pFormat = pConv->FindFormat("mpqc");
+        formatName = "mpqc";
         break;
       } else if (strstr(buffer,"PROGRAM SYSTEM MOLPRO") != NULL) {
         // MOLPRO output
-        pFormat = pConv->FindFormat("mpo");
+        formatName = "mpo";
         break;
       } else if ((strstr(buffer,"Schrodinger, Inc.") != NULL) &&
                  (strstr(buffer,"Jaguar") != NULL)) {
         // Jaguar
-        pFormat = pConv->FindFormat("jout");
+        formatName = "jout";
         break;
       }
     }
 
+    // if we assigned something above, let's try to find it
+    if (formatName.length())
+      pFormat = pConv->FindFormat(formatName);
+
     if (pFormat) {
       ifs.seekg (0, ios::beg); // reset the stream to the beginning
-      return pFormat->ReadMolecule(pOb, pConv);
+      bool success = pFormat->ReadMolecule(pOb, pConv);
+
+      // Tag the molecule with the format (e.g., if a program wants to know the kind of "out" or "log" file)
+      // We have to do this *after* ReadMolecule returns, or the data might be cleared
+      if (pOb) {
+        OBPairData *dp = new OBPairData;
+        dp->SetAttribute("File Format");
+        dp->SetValue(formatName);
+        dp->SetOrigin(fileformatInput);
+        pOb->SetData(dp);
+      }
+
+      return success;
     }
 
     obErrorLog.ThrowError(__FUNCTION__,

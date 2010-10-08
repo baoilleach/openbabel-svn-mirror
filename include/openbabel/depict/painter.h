@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 #include <string>
 #include <vector>
+#include <sstream>
 #ifndef OBDEPICT
   #define OBDEPICT
 #endif
@@ -41,8 +42,15 @@ namespace OpenBabel
         red(_red), green(_green), blue(_blue), alpha(_alpha)
     {
     }
-    OBColor(const std::string &color) 
+    OBColor(const std::string &color)
     {
+      if (color[0]=='#')
+      {
+        std::stringstream ss(color.substr(1));
+        unsigned c;
+        ss >> std::hex >> c;
+        *this = OBColor((c/0x10000)/256.0, ((c%0x10000)/0x100/256.0), (c%0x100)/256.0);
+      }
       if (color == "black")
         *this = OBColor(0.0, 0.0, 0.0);
       else if (color == "white")
@@ -57,8 +65,18 @@ namespace OpenBabel
         *this = OBColor(1.0, 1.0, 0.0);
       else if (color == "gray")
         *this = OBColor(0.3, 0.3, 0.3);
+      else if (color == "cyan")
+        *this = OBColor(1.0, 0.0, 1.0);
+      else if (color == "purple")
+        *this = OBColor(0.5, 0.0, 0.5);
+      else if (color == "teal")
+        *this = OBColor(0.0, 0.5, 0.5);
+      else if (color == "olive")
+        *this = OBColor(0.5, 0.5, 0.0);
+      else
+        *this = OBColor(0.5, 0.5, 0.5);
     }
-    
+
     OBColor(std::vector<double> vec) : red(vec[0]), green(vec[1]), blue(vec[2]), alpha(1.0){}
 
     bool operator !=(const OBColor& other)
@@ -82,7 +100,7 @@ namespace OpenBabel
   /**
    * @since version 2.3
    */
-  class OBDEPICT OBPainter 
+  class OBDEPICT OBPainter
   {
     public:
       /**
@@ -91,7 +109,7 @@ namespace OpenBabel
       virtual ~OBPainter() {}
 
       /**
-       * Create a new canvas to paint on with size @p width x @p height. 
+       * Create a new canvas to paint on with size @p width x @p height.
        * OBDepict will always call NewCanvas before performing any drawing
        * operations. Painters that are capable of drawing on a previously
        * unspecified area don't need to implement this.
@@ -99,7 +117,7 @@ namespace OpenBabel
       virtual void NewCanvas(double width, double height) = 0;
       /**
        * Before OBDepict performes any drawing operation, this method is called
-       * to check if the painter is ready to start drawing. If this method 
+       * to check if the painter is ready to start drawing. If this method
        * returns false, drawing is aborted.
        */
       virtual bool IsGood() const = 0;
@@ -131,7 +149,7 @@ namespace OpenBabel
       virtual void DrawCircle(double x, double y, double r) = 0;
       /**
        * Draw a polygon by connecting consecutive points. The last point will be
-       * connected to the first one. The lines are drawn using the current pen 
+       * connected to the first one. The lines are drawn using the current pen
        * color and width. The area inside the polygon is filled with the current
        * fill color.
        */

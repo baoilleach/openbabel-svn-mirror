@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include <openbabel/depict/painter.h>
 #include <algorithm> // std::reverse
 #include <iterator> // std::istream_iterator
+#include <openbabel/stereo/stereo.h>
 
 #include <iostream>
 using namespace std;
@@ -55,6 +56,7 @@ namespace OpenBabel
       void DrawAtomLabel(const std::string &label, int alignment, const vector3 &pos);
 
       bool HasLabel(OBAtom *atom);
+      void SetWedgeAndHash(OBMol* mol);
 
       OBMol     *mol;
       OBPainter *painter;
@@ -274,46 +276,52 @@ namespace OpenBabel
 
     d->mol = mol;
 
+    double width=0.0, height=0.0;
+
     OBAtom *atom;
     OBBondIterator j;
     OBAtomIterator i;
 
-    // scale bond lengths
-    double bondLengthSum = 0.0;
-    for (OBBond *bond = mol->BeginBond(j); bond; bond = mol->NextBond(j))
-      bondLengthSum += bond->GetLength();
-    const double averageBondLength = bondLengthSum / mol->NumBonds();
-    const double f = mol->NumBonds() ? d->bondLength / averageBondLength : 1.0;
-    for (atom = mol->BeginAtom(i); atom; atom = mol->NextAtom(i))
-      atom->SetVector(atom->GetX() * f, atom->GetY() * f, 0.0);
+    if(mol->NumAtoms()>0) {
+      // scale bond lengths
+      double bondLengthSum = 0.0;
+      for (OBBond *bond = mol->BeginBond(j); bond; bond = mol->NextBond(j))
+        bondLengthSum += bond->GetLength();
+      const double averageBondLength = bondLengthSum / mol->NumBonds();
+      const double f = mol->NumBonds() ? d->bondLength / averageBondLength : 1.0;
+      for (atom = mol->BeginAtom(i); atom; atom = mol->NextAtom(i))
+        atom->SetVector(atom->GetX() * f, atom->GetY() * f, 0.0);
 
-    // find min/max values
-    double min_x, max_x;
-    double min_y, max_y;
-    atom = mol->BeginAtom(i);
-    min_x = max_x = atom->GetX();
-    min_y = max_y = atom->GetY();
-    for (atom = mol->NextAtom(i); atom; atom = mol->NextAtom(i)) {
-      min_x = std::min(min_x, atom->GetX());
-      max_x = std::max(max_x, atom->GetX());
-      min_y = std::min(min_y, atom->GetY());
-      max_y = std::max(max_y, atom->GetY());
+      // find min/max values
+      double min_x, max_x;
+      double min_y, max_y;
+      atom = mol->BeginAtom(i);
+      min_x = max_x = atom->GetX();
+      min_y = max_y = atom->GetY();
+      for (atom = mol->NextAtom(i); atom; atom = mol->NextAtom(i)) {
+        min_x = std::min(min_x, atom->GetX());
+        max_x = std::max(max_x, atom->GetX());
+        min_y = std::min(min_y, atom->GetY());
+        max_y = std::max(max_y, atom->GetY());
+      }
+
+      const double margin = 40.0;
+      // translate all atoms so the bottom-left atom is at margin,margin
+      for (atom = mol->BeginAtom(i); atom; atom = mol->NextAtom(i))
+        atom->SetVector(atom->GetX() - min_x + margin, atom->GetY() - min_y + margin, 0.0);
+
+      width  = max_x - min_x + 2*margin;
+      height = max_y - min_y + 2*margin;
+      
+      //d->painter->SetPenWidth(d->penWidth);
+      //d->painter->SetPenColor(d->pen));
+      //d->painter->SetFillColor(OBColor("black"));
     }
 
-    const double margin = 40.0;
-    // translate all atoms so the bottom-left atom is at margin,margin
-    for (atom = mol->BeginAtom(i); atom; atom = mol->NextAtom(i))
-      atom->SetVector(atom->GetX() - min_x + margin, atom->GetY() - min_y + margin, 0.0);
-
-    double width = max_x - min_x + 2*margin;
-    double height = max_y - min_y + 2*margin;
-    
-    //d->painter->SetPenWidth(d->penWidth);
-    //d->painter->SetPenColor(d->pen));
-    //d->painter->SetFillColor(OBColor("black"));
     d->painter->NewCanvas(width, height);
     
     // draw bonds
+    d->SetWedgeAndHash(mol);
     for (OBBond *bond = mol->BeginBond(j); bond; bond = mol->NextBond(j)) {
       OBAtom *begin = bond->GetBeginAtom();
       OBAtom *end = bond->GetEndAtom();
@@ -443,6 +451,12 @@ namespace OpenBabel
           d->painter->SetPenColor(aliasColor);
       }
       else {
+        const char* atomSymbol;
+        if(atom->IsHydrogen() && atom->GetIsotope()>1)
+          atomSymbol = atom->GetIsotope()==2 ? "D" : "T";
+        else
+          atomSymbol = etab.GetSymbol(atom->GetAtomicNum());
+
         unsigned int hCount = atom->ImplicitHydrogenCount();
         // rightAligned:  
         //   false  CH3
@@ -451,7 +465,7 @@ namespace OpenBabel
           ss << "H";
         if ((hCount > 1) && rightAligned)
           ss << hCount;
-        ss << etab.GetSymbol(atom->GetAtomicNum());
+        ss << atomSymbol;
         if (hCount && !rightAligned)
           ss << "H";
         if ((hCount > 1) && !rightAligned)
@@ -479,11 +493,11 @@ namespace OpenBabel
     orthogonalLine *= 0.5 * bondWidth;
     std::vector<std::pair<double,double> > points;
 
-    points.push_back(std::pair<double,double>(begin.x(), begin.y()));
-    points.push_back(std::pair<double,double>(end.x() + orthogonalLine.x(), 
-                                              end.y() + orthogonalLine.y()));
-    points.push_back(std::pair<double,double>(end.x() - orthogonalLine.x(), 
-                                              end.y() - orthogonalLine.y()));
+    points.push_back(std::pair<double,double>(end.x(), end.y()));
+    points.push_back(std::pair<double,double>(begin.x() + orthogonalLine.x(), 
+                                              begin.y() + orthogonalLine.y()));
+    points.push_back(std::pair<double,double>(begin.x() - orthogonalLine.x(), 
+                                              begin.y() - orthogonalLine.y()));
     painter->DrawPolygon(points);
   }
 
@@ -502,14 +516,14 @@ namespace OpenBabel
     orthogonalLine.normalize();
     orthogonalLine *= 0.5 * bondWidth;
 
-    double lines[5] = { 0.25, 0.40, 0.55, 0.70 , 0.90 };
+    double lines[7] = { 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70 };
 
-    for (int k = 0; k < 5; ++k) {
+    for (int k = 0; k < 7; ++k) {
       double w = lines[k];
-      painter->DrawLine(begin.x() + vb.x() * w + orthogonalLine.x() * w, 
-                        begin.y() + vb.y() * w + orthogonalLine.y() * w, 
-                        begin.x() + vb.x() * w - orthogonalLine.x() * w, 
-                        begin.y() + vb.y() * w - orthogonalLine.y() * w);
+      painter->DrawLine(end.x() - vb.x() * w + orthogonalLine.x() * w, 
+                        end.y() - vb.y() * w + orthogonalLine.y() * w, 
+                        end.x() - vb.x() * w - orthogonalLine.x() * w, 
+                        end.y() - vb.y() * w - orthogonalLine.y() * w);
     }
   } 
   
@@ -673,6 +687,21 @@ namespace OpenBabel
     if ((options & OBDepict::drawAllC) || ((options & OBDepict::drawTermC) && (atom->GetValence() == 1)))
       return true;
     return false;
+  }
+
+  void OBDepictPrivate::SetWedgeAndHash(OBMol* mol)  {
+    std::map<OBBond*, enum OBStereo::BondDirection> updown;
+    std::map<OBBond*, OBStereo::Ref> from;
+    std::map<OBBond*, OBStereo::Ref>::const_iterator from_cit;
+    TetStereoTo0D(*mol, updown, from);
+
+    for(from_cit=from.begin();from_cit!=from.end();++from_cit) {
+      OBBond* pbond = from_cit->first;
+      if(updown[pbond]==OBStereo::UpBond)
+        pbond->SetHash();
+      else if(updown[pbond]==OBStereo::DownBond)
+        pbond->SetWedge();
+    }
   }
 
 }

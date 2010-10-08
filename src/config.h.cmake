@@ -21,7 +21,7 @@
   #define OB_EXPORT __attribute__ ((visibility("default")))
   #define OB_IMPORT __attribute__ ((visibility("default")))
   #define OB_HIDDEN __attribute__ ((visibility("hidden")))
-#elif defined(WIN32) && !defined(__MINGW32__)
+#elif defined(WIN32) && defined(USING_DYNAMIC_LIBS) && !defined(__MINGW32__)
  #define OB_EXPORT __declspec(dllexport)
  #define OB_IMPORT __declspec(dllimport)
  #define OB_HIDDEN
@@ -101,8 +101,8 @@
  #pragma warning( disable : 4290 )
  // Supress warning on signed/unsigned comparison with < or > (harmless, but maybe should be fixed)
  #pragma warning( disable : 4018 )
- // Supress warning on unreferenced formal parameter
- #pragma warning( disable : 4100 )
+ // Supress warning on forcing int etc. value to bool 'true' or 'false' (performance warning)
+ #pragma warning( disable : 4800 )
  //
  #pragma warning( disable : 4251 )
 
