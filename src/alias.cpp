@@ -1,11 +1,11 @@
 /**********************************************************************
 alias.cpp - implementation of an OBGenericData class to hold alias information on atoms
 Copyright (C) 2008 by Chris Morley
- 
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation version 2 of the License.
- 
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include <openbabel/op.h>
 #include <openbabel/builder.h>
 #include <openbabel/parsmart.h>
+#include <openbabel/mcdlutil.h>
 
 using namespace std;
 namespace OpenBabel
@@ -60,95 +61,11 @@ namespace OpenBabel
       }
     }
 
-    if(FromNameLookup(mol, atomindex))
-      return true;
-
-    if(!FormulaParse(mol, atomindex))
+    if(!FromNameLookup(mol, atomindex))
     {
-      obErrorLog.ThrowError(__FUNCTION__, "Alias " + _alias + " Could not be interpreted.\n Output may not be correct.", obWarning, onceOnly);
+      obErrorLog.ThrowError(__FUNCTION__, "Alias " + _alias + 
+        " Could not be interpreted.\n Output may not be correct.", obWarning, onceOnly);
       return false;
-    }
-    return true;
-  }
-
-
-  //Crude implementation of formula parse
-  //This should really not alter the molecule until the parsing has been
-  //seen to be successful - another method may be better. But at present
-  //there is no other method.
-  //Only single character element symbols are handled
-  //Atom which replaces atomindex is the first non-H 
-  //Will parse ND2 DS CH-
-  bool AliasData::FormulaParse(OBMol& mol,const unsigned atomindex)
-  {
-    //(Adapt to use old code)
-    char* txt = new char[_alias.size()+1];
-    strcpy(txt, _alias.c_str());
-
-    if(*txt=='?') //Assume that it is harmless to ignore this alias
-    {
-      delete[] txt;
-      return true;
-    }
-    if(!isalpha(*txt)) //first char is the element that replaces atomindex
-    {
-      return false;
-      delete[] txt;
-    }
-    //Swaps any leading H isotope with the first non-H atom
-    if(*txt=='H' || *txt=='D' || *txt=='T')
-    {
-      char* p =txt+1;
-      while(*p && *p=='H' && *p=='D' && *p=='T')p++;
-      if(*p)
-        std::swap(*p, *txt);
-    }
-    char symb[2];
-    symb[0]=*(txt++);
-    symb[1]='\0';
-    OBAtom* pAtom = mol.GetAtom(atomindex);
-    if(!pAtom)
-      return false;
-    int iso = 0;
-    pAtom->SetAtomicNum(etab.GetAtomicNum(symb,iso));
-    if(iso)
-      pAtom->SetIsotope(iso);
-    _expandedatoms.push_back(atomindex);
-
-    while(*txt)
-    {
-      if(isspace(*txt)) {
-        ++txt;
-        continue;
-      }
-      int chg=0;
-      if(*txt=='-')
-        chg = -1;
-      else if(*txt=='+')
-        chg = 1;
-      if(chg)
-      {
-        pAtom->SetFormalCharge(pAtom->GetFormalCharge()+chg);//put on central atom e.g. CH-
-        ++txt;
-        continue;
-      }
-      if(!isalpha(*txt))
-        return false;
-      symb[0]=*txt;
-      int rep = atoi(++txt);
-      if(rep)
-        ++txt;
-      do //for each rep
-      {
-        OBAtom* newAtom = mol.NewAtom();
-        _expandedatoms.push_back(mol.NumAtoms());
-        iso = 0;
-        newAtom->SetAtomicNum(etab.GetAtomicNum(symb,iso));
-        if(iso)
-          newAtom->SetIsotope(iso);
-
-        if (!mol.AddBond(atomindex,mol.NumAtoms(),1,0)) return false;
-      }while(--rep>0);
     }
     return true;
   }
@@ -158,8 +75,8 @@ bool AliasData::FromNameLookup(OBMol& mol, const unsigned int atomindex)
   /*Converts an alias name (like COOH) to real chemistry:
     looks up in a table loaded from superatom.txt;
     converts the SMILES of the fragment and adds it to the molecule.
-    If the molecule already has atom coordinates, uses builder to generate
-    coordinates for the new atoms.
+    If the molecule already has atom coordinates, generates coordinates
+    for the new atoms, using builder for 3D and MCDL for 2D.
   */
 
   OBAtom* XxAtom = mol.GetAtom(atomindex);
@@ -171,10 +88,7 @@ bool AliasData::FromNameLookup(OBMol& mol, const unsigned int atomindex)
 */
   SuperAtomTable::iterator pos = table().find(_alias);
   if(pos==table().end())
-  {
-//    obErrorLog.ThrowError(__FUNCTION__, "Alias " + _alias + " was not recognized.\n Output may not be correct.", obWarning, onceOnly);
     return false;
-  }
 
   int dimension=0;
   if(mol.Has3D())
@@ -189,38 +103,63 @@ bool AliasData::FromNameLookup(OBMol& mol, const unsigned int atomindex)
   obFrag.SetIsPatternStructure();
   if(conv.SetInFormat("smi"))
   {
-    conv.ReadString(&obFrag, pos->second.smiles);//.second);
+    conv.ReadString(&obFrag, '*' + pos->second.smiles);//Add dummy atom to SMILES
     _right_form = pos->second.right_form;
     _color      = pos->second.color;
   }
+  obFrag.SetDimension(dimension);//will be same as parent
 
-  //Find index of atom to which XxAtom is attached, and the eventual index of first atom in fragment
+  //Find index of *first* atom to which XxAtom is attached
   OBBondIterator bi;
   unsigned mainAttachIdx = (XxAtom->BeginNbrAtom(bi))->GetIdx();
-  unsigned    newFragIdx = mol.NumAtoms()+1;
-  
-  //obFrag.SetDimension(dimension);
-  OBBuilder builder;
-  //Give the fragment appropriate coordinates
-  if(dimension!=0)
-    builder.Build(obFrag);
+ 
+  //++Make list of other attachments* of XxAtom
+  // (Added later so that the existing bonding of the XXAtom are retained)
+  vector<pair<OBAtom*, unsigned> > otherAttachments;
+  OBAtom* pAttach;
+  while( (pAttach = XxAtom->NextNbrAtom(bi)) ) // extra parentheses to minimize warnings
+    otherAttachments.push_back(make_pair(pAttach, (*bi)->GetBondOrder()));
 
- //Combine with main molecule 
-  mol += obFrag;
+  //Copy coords of XxAtom to the first real atom in the fragment
+  //so that the connecting bond is well defined for 2D case
+  obFrag.GetAtom(2)->SetVector( XxAtom->GetVector());
 
   //delete original Xx atom
   mol.DeleteAtom(XxAtom, false);//delay deletion of the OBAtom object because this is attached to it
   //Correct indices for the deletion
-  --newFragIdx;
   if(atomindex<mainAttachIdx)
     --mainAttachIdx;
 
-  //Attach the fragment to the main molecule
-  if(dimension==0)
-    mol.AddBond(mainAttachIdx, newFragIdx, 1);
-  else
+  //Find the eventual index of first atom in fragment
+  unsigned newFragIdx = mol.NumAtoms()+1;
+
+  //Give the fragment appropriate coordinates
+  if(dimension==3)
+  {
+    OBBuilder builder;
+
+    builder.Build(obFrag);
+    obFrag.DeleteAtom(obFrag.GetAtom(1));//remove dummy atom
+    mol += obFrag; //Combine with main molecule
     builder.Connect(mol, mainAttachIdx, newFragIdx);
-  
+  }
+  else // 0D, 2D  
+  {
+    obFrag.DeleteAtom(obFrag.GetAtom(1));//remove dummy atom
+    mol += obFrag; //Combine with main molecule and connect
+    mol.AddBond(mainAttachIdx, newFragIdx, 1);
+  }
+
+  if(dimension==2)//Use MCDL
+    groupRedraw(&mol, mol.NumBonds()-1, newFragIdx, true);
+
+  //++Add bonds from list to newFragIdx
+  while(!otherAttachments.empty())
+  {
+    mol.AddBond(otherAttachments.back().first->GetIdx(), newFragIdx, otherAttachments.back().second);
+    otherAttachments.pop_back();
+  }
+
   //Store the ids of the atoms which replace the alias (the last atoms in the combined molecule).
   //The ids do not change when other atoms are deleted.
   for(unsigned i=obFrag.NumAtoms();i;--i)
@@ -282,10 +221,10 @@ bool AliasData::LoadFile(SmartsTable& smtable)
     if(tokenize(vec, ln) && vec.size()>=3)
     {
       //Convert SMILES with implicit H to SMARTS with explicit H.
-      //Converting into and out of OBMol is a bit heavy, but saves 
+      //Converting into and out of OBMol is a bit heavy, but saves
       //worrying about edge cases in a string parse.
       stringstream ss('*'+vec[2]),// '*' added to SMILES because the superatom has to be attached
-                   ssmarts; 
+                   ssmarts;
       OBConversion conv(&ss, &ssmarts);
       conv.AddOption("h",OBConversion::GENOPTIONS);//add explicit Hs...
       conv.AddOption("h");//...and output them to ensure the superatom itself is not substituted
@@ -328,14 +267,14 @@ void AliasData::DeleteExpandedAtoms(OBMol& mol)
 void AliasData::RevertToAliasForm(OBMol& mol)
 {
   //Deleting atoms invalidates the iterator, so start again
-  //and continue until all no unexpanded aliases are found in molecule. 
+  //and continue until all no unexpanded aliases are found in molecule.
   bool acted;
   do
   {
     FOR_ATOMS_OF_MOL(a, mol)
     {
       acted=false;
-      AliasData* ad = NULL; 
+      AliasData* ad = NULL;
       if((ad = (static_cast<AliasData*>(a->GetData(AliasDataType)))) && ad->IsExpanded())
       {
         ad->DeleteExpandedAtoms(mol);
@@ -358,7 +297,7 @@ bool AliasData::AddAliases(OBMol* pmol)
   {
     if((*iter).second->Match(*pmol))
     {
-      vector<std::vector<int> > mlist = (*iter).second->GetUMapList();      
+      vector<std::vector<int> > mlist = (*iter).second->GetUMapList();
       for(unsigned imatch=0;imatch<mlist.size();++imatch) //each match
       {
         AliasData* ad  = new AliasData;
@@ -376,7 +315,7 @@ bool AliasData::AddAliases(OBMol* pmol)
           }
           else
           {
-            AllExAtoms.insert(idx);        
+            AllExAtoms.insert(idx);
             int id  =(pmol->GetAtom(idx))->GetId();
             ad->AddExpandedAtom(id);
           }

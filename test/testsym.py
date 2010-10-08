@@ -54,7 +54,7 @@ class TestTetSym(TestSym):
         self.canFindExecutable("babel")
 
         # The following all represent the same molecule
-        self.cansmi = "C[C@@](F)(Cl)Br"
+        self.cansmi = "[C@@](Br)(Cl)(F)C"
         self.inchi = "InChI=1S/C2H3BrClF/c1-2(3,4)5/h1H3/t2-/m0/s1"
         self.smiles = [
              'C[C@@](Cl)(Br)F',
@@ -91,7 +91,7 @@ class TestCisTransSym(TestSym):
         self.canFindExecutable("babel")
 
         # The following all represent the same molecule
-        self.cansmi = "Cl/C=C/C=C\Br"
+        self.cansmi = "C(=C\\Cl)/C=C\\Br"
         self.inchi = "InChI=1S/C4H4BrCl/c5-3-1-2-4-6/h1-4H/b3-1-,4-2+"
         self.smiles = [
                 "C(=C\C=C/Br)/Cl",
@@ -102,24 +102,63 @@ class TestCisTransSym(TestSym):
                 "C(=C\Br)\C=C\Cl"
                 ]
 
+class TestLonePairTetSym(TestSym):
+    """A series of tests relating to tet symmetry involving a lone pair"""
+
+    def setUp(self):
+        self.canFindExecutable("babel")
+
+        # The following all represent the same molecule
+        self.cansmi = "[S@@](=O)(Cl)C"
+        self.inchi = "InChI=1S/CH3ClOS/c1-4(2)3/h1H3/t4-/m0/s1"
+        self.smiles = [
+                self.cansmi,
+                "O=[S@](Cl)C",
+                "O=[S@@](C)Cl",
+                "[S@](Cl)(=O)C",
+                ]
+
+class TestRingBondCisTransSym(TestSym):
+    """A series of tests relating to tet symmetry involving a lone pair"""
+
+    def setUp(self):
+        self.canFindExecutable("babel")
+
+        # The following all represent the same molecule
+        self.cansmi = r"C\1(=C\I)/NC1"
+        self.inchi = "InChI=1S/C3H4IN/c4-1-3-2-5-3/h1,5H,2H2/b3-1+"
+        self.smiles = [
+                self.cansmi,
+                r"I/C=C\1/NC1",
+                r"I/C=C1NC/1",
+                 "I/C=C/1/NC/1",
+                ]
+
 class TestConversions(BaseTest):
     """A series of tests relating to file format conversions and symmetry"""
     
     def setUp(self):
         self.canFindExecutable("babel")
+        self.data = [
+('ClC=CF', 'C(=CCl)F',       'InChI=1S/C2H2ClF/c3-1-2-4/h1-2H'),
+('Cl/C=C/F', 'C(=C\\Cl)/F',   'InChI=1S/C2H2ClF/c3-1-2-4/h1-2H/b2-1+'),
+('Cl/C=C\\F', 'C(=C\\Cl)\\F', 'InChI=1S/C2H2ClF/c3-1-2-4/h1-2H/b2-1-'),
+('Cl[C@@](Br)(F)I', '[C@@](I)(Br)(Cl)F', 'InChI=1S/CBrClFI/c2-1(3,4)5/t1-/m0/s1'),
+('Cl[C@](Br)(F)I', '[C@](I)(Br)(Cl)F',   'InChI=1S/CBrClFI/c2-1(3,4)5/t1-/m1/s1'),
+('ClC(Br)(F)I', 'C(I)(Br)(Cl)F',         'InChI=1S/CBrClFI/c2-1(3,4)5'),
+('O=[S@@](Cl)I', "[S@@](=O)(I)Cl", "InChI=1S/ClIOS/c1-4(2)3/t4-/m0/s1"),
+('O=[S@](Cl)I', "[S@](=O)(I)Cl", "InChI=1S/ClIOS/c1-4(2)3/t4-/m1/s1"),
+('O=S(Cl)I', "S(=O)(I)Cl", "InChI=1S/ClIOS/c1-4(2)3"),
+(r"IC=C1NC1", r"C1(=CI)NC1", "InChI=1S/C3H4IN/c4-1-3-2-5-3/h1,5H,2H2"),
+(r"I/C=C\1/NC1", r"C\1(=C\I)/NC1", "InChI=1S/C3H4IN/c4-1-3-2-5-3/h1,5H,2H2/b3-1+"),
+(r"I/C=C/1\NC1", r"C\1(=C/I)/NC1", "InChI=1S/C3H4IN/c4-1-3-2-5-3/h1,5H,2H2/b3-1-"),
+]
         
     def testSMILEStoInChI(self):
         # Tests interconversions between the SMILES on the left versus
         # the InChI on the right.
         # The canonical smiles (in the middle) were derived from the SMILES.
-        data = [
-('ClC=CF', 'FC=CCl',       'InChI=1S/C2H2ClF/c3-1-2-4/h1-2H'),
-('Cl/C=C/F', 'F/C=C/Cl',   'InChI=1S/C2H2ClF/c3-1-2-4/h1-2H/b2-1+'),
-('Cl/C=C\\F', 'F/C=C\\Cl', 'InChI=1S/C2H2ClF/c3-1-2-4/h1-2H/b2-1-'),
-('Cl[C@@](Br)(F)I', 'F[C@@](Cl)(Br)I', 'InChI=1S/CBrClFI/c2-1(3,4)5/t1-/m0/s1'),
-('Cl[C@](Br)(F)I', 'F[C@](Cl)(Br)I',   'InChI=1S/CBrClFI/c2-1(3,4)5/t1-/m1/s1'),
-('ClC(Br)(F)I', 'FC(Cl)(Br)I',         'InChI=1S/CBrClFI/c2-1(3,4)5')]
-        for smiles, can, inchi in data:
+        for smiles, can, inchi in self.data:
             output, error = run_exec(smiles, "babel -ismi -oinchi")
             self.assertEqual(output.rstrip(), inchi)
             output, error = run_exec(inchi, "babel -iinchi -ocan")
@@ -143,14 +182,22 @@ class TestConversions(BaseTest):
     def testSMILESto3DMDL(self):
         """Test interconversion between SMILES and 3D MDL"""
         data = [
-('ClC=CF', 'FC=CCl', [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 3]),
-('Cl/C=C/F', 'F/C=C/Cl', [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0]),
-('Cl/C=C\\F', 'F/C=C\\Cl', [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), 
-('Cl[C@@](Br)(F)I', 'F[C@@](Cl)(Br)I', [0, 0, 0, 0, 1], [0, 0, 0, 1]),
-('Cl[C@](Br)(F)I', 'F[C@](Cl)(Br)I', [0, 0, 0, 0, 2], [0, 0, 0, 6]),
-('ClC(Br)(F)I', 'FC(Cl)(Br)I', [0, 0, 0, 0, 3], [0, 0, 0, 4])
+([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 3]), # 'ClC=CF'
+([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), # 'Cl/C=C/F'
+([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), # 'Cl/C=C\\F'
+# The bond parities are irrelevant/meaningless for the next two
+([0, 0, 0, 0, 1], []), # 'Cl[C@@](Br)(F)I'
+([0, 0, 0, 0, 2], []), # 'Cl[C@](Br)(F)I'
+([0, 0, 0, 0, 3], [0, 0, 0, 4]), # 'ClC(Br)(F)I'
+([0, 0, 0, 1], []), # 'O=[S@@](Cl)I),
+([0, 0, 0, 2], []), # 'O=[S@](Cl)I),
+([0, 0, 0, 3], []), # 'O=S(Cl)I),
+([0]*9, [0]*8 + [3]), #  "IC=C1NC1"
+([0]*9, [0]*9), # r"I/C=C\1/NC1"
+([0]*9, [0]*9), # r"I/C=C/1\NC1"
 ]
-        for smiles, can, atompar, bondstereo in data:
+        for i, (atompar, bondstereo) in enumerate(data):
+            smiles, can = self.data[i][0:2]
             output, error = run_exec(smiles, "babel -ismi -osdf --gen3d")
             atoms, bonds = self.parseMDL(output)
             parities = [atom['parity'] for atom in atoms]
@@ -158,7 +205,8 @@ class TestConversions(BaseTest):
             stereos = [bond['stereo'] for bond in bonds]
             stereos.sort()
             self.assertEqual(atompar, parities)
-            self.assertEqual(bondstereo, stereos)
+            if bondstereo:
+                self.assertEqual(bondstereo, stereos)
             output, error = run_exec(output, "babel -isdf -ocan")
             self.assertEqual(output.rstrip(), can)
 
@@ -167,21 +215,35 @@ class TestConversions(BaseTest):
         # The following file was created using RDKit starting from
         # the SMILES strings in data[x][0] below.
         filename = self.getTestFile("testsym_2Dtests.sdf")
-        data = [
-('ClC=CF', 'FC=CCl',       'InChI=1S/C2H2ClF/c3-1-2-4/h1-2H'),
-('Cl/C=C/F', 'F/C=C/Cl',   'InChI=1S/C2H2ClF/c3-1-2-4/h1-2H/b2-1+'),
-('Cl/C=C\\F', 'F/C=C\\Cl', 'InChI=1S/C2H2ClF/c3-1-2-4/h1-2H/b2-1-'),
-('Cl[C@@](Br)(F)I', 'F[C@@](Cl)(Br)I', 'InChI=1S/CBrClFI/c2-1(3,4)5/t1-/m0/s1'),
-('Cl[C@](Br)(F)I', 'F[C@](Cl)(Br)I',   'InChI=1S/CBrClFI/c2-1(3,4)5/t1-/m1/s1'),
-('ClC(Br)(F)I', 'FC(Cl)(Br)I',         'InChI=1S/CBrClFI/c2-1(3,4)5')]
         
         output, error = run_exec("babel -isdf %s -ocan" % filename)
         for i, smiles in enumerate(output.rstrip().split("\n")):
-            self.assertEqual(smiles.rstrip(), data[i][1])
+            self.assertEqual(smiles.rstrip(), self.data[i][1])
 
         output, error = run_exec("babel -isdf %s -oinchi" % filename)
         for i, inchi in enumerate(output.rstrip().split("\n")):
-            self.assertEqual(inchi.rstrip(), data[i][2])
+            self.assertEqual(inchi.rstrip(), self.data[i][2])
+
+    def testSMILESto0DMDL(self):
+        """Test interconversion between SMILES and 0D MDL"""
+        data = [
+([0, 0, 0, 0, 1], [0, 0, 0, 0]), # 'Cl[C@@](Br)(F)I'
+([0, 0, 0, 0, 2], [0, 0, 0, 0]), # 'Cl[C@](Br)(F)I'
+([0, 0, 0, 0, 3], [0, 0, 0, 0])  # 'ClC(Br)(F)I'
+]
+        for i, (atompar, bondstereo) in enumerate(data):
+            smiles, can = self.data[i + 3][0:2]
+            output, error = run_exec(smiles, "babel -ismi -osdf")
+            atoms, bonds = self.parseMDL(output)
+            parities = [atom['parity'] for atom in atoms]
+            parities.sort()
+            stereos = [bond['stereo'] for bond in bonds]
+            stereos.sort()
+            self.assertEqual(atompar, parities)
+            self.assertEqual(bondstereo, stereos)
+            output, error = run_exec(output, "babel -isdf -as -ocan")
+            self.assertEqual(output.rstrip(), can)
+
 
 class TestStereoConversion(BaseTest):
     """Random tests relating to roundtripping stereochemistry"""
@@ -190,16 +252,33 @@ class TestStereoConversion(BaseTest):
     def testInChIToSMILES_Bug(self):
         """PR#2101034- InChI <-> SMILES conv misrepresents stereo"""
         test_inchi = 'InChI=1S/C10H10/c1-2-3-7-10-8-5-4-6-9-10/h2-9H,1H2/b7-3+'
-        output, error = run_exec(test_inchi, "babel -iinchi -ocan")
+        output, error = run_exec(test_inchi, "babel -iinchi -osmi")
         self.assertEqual(output.rstrip(), "C=C/C=C/c1ccccc1")
         
         test_smiles = "C=C\C=C/c1ccccc1"
         output, error = run_exec(test_smiles, "babel -ismi -oinchi")
         self.assertEqual(output.rstrip(), "InChI=1S/C10H10/c1-2-3-7-10-8-5-4-6-9-10/h2-9H,1H2/b7-3-")
+    def testChiralToLonePair(self):
+        """PR#3058701 - Handle stereochemistry at lone pair on S"""
+        # Note to self: Need to ensure that roundtripping through the various
+        # 2D and 3D formats works. In the meanwhile, this test at least ensures
+        # that SMILES reading and writing works fine.
+        can = '[S@@](=O)(Cl)C'
+        smiles = [can, '[S@](Cl)(=O)C', 'O=[S@](Cl)C']
+        for smile in smiles:
+            output, error = run_exec(smile, "babel -ismi -ocan")
+            self.assertEqual(output.rstrip(), can)
+        # Check that regular chiral S still work fine
+        smi = "[S@](=O)(=N)(C)O"
+        output, error = run_exec(smi, "babel -ismi -osmi")
+        self.assertEqual(output.rstrip(), smi)
         
 if __name__ == "__main__":
     testsuite = []
-    for myclass in [TestConversions, TestCisTransSym, TestTetSym, TestStereoConversion]:
+    allclasses = [TestConversions, TestCisTransSym, TestTetSym,
+                  TestLonePairTetSym, TestStereoConversion,
+                  TestRingBondCisTransSym]
+    for myclass in allclasses:
         suite = unittest.TestLoader().loadTestsFromTestCase(myclass)
         testsuite.append(suite)
     unittest.TextTestRunner().run(unittest.TestSuite(testsuite))

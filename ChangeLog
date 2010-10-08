@@ -1,3 +1,268 @@
+2010-09-30 Chris Morley
+
+	* src/alias.cpp: Use MCDL for expanding aliases in 2D mols, since
+	builder seems now only to generate 3D coords. Add dummy connection to
+	alias before generating 3D coords to improve geometry, but still not
+	quite right for NO2. Fixes #3077897
+	
+	* src/mcdlutil.cpp: small doc change
+	
+	* src/config.h.cmake: MSVC build: enable warning on unreferenced
+	formal parameters and disable warning on forcing int etc. value 
+	to bool 'true' or 'false' (performance warning). Should reduce number
+	of warnings.
+
+2010-09-29 Noel O'Boyle
+
+	* src/formats/smilesformat.cpp: Handle cis/trans stereo involving ring
+	closures. Handle errors in specifying cis/trans stereo in general and
+	involving ring closures.
+
+2010-09-23 Noel O'Boyle
+
+	* src/math/align.cpp, align.h: Add OBAlign::GetRotMatrix()
+
+	* test/aligntest.cpp: Add basic test for GetRotMatrix()
+
+2010-09-23 Chris Morley
+
+	* src/fingerprints/finger2.cpp: generate detailed fragement info
+	and output via new DescribeBits function, as suggested by Noel. 
+	
+	* include/openbabel/fingerprint.h: make Flags interface writeable.
+	
+	* src/fingerprint.cpp(FastsearchIndexer): set fingerprints
+	FPT_NOINFO flag to save time (FP2).  
+	
+	* src/fingerprints/finger3.cpp,src/formats/fingerprintformat.cpp:
+	minor format changes to DescribeBits output.
+
+2010-09-19  Noel O'Boyle
+
+	* src/formats/inchiformat.cpp: Handle atoms with tet chirality due to
+	lone pairs.
+
+2010-09-19  Chris Morley
+
+	* src/ops/opisomorph.cpp: As requested by Douglas Houston, -s option
+	allows multiple molecules in pattern file (with multiple coloring of
+	matching substructures); -v (inverse of -s) now uses the same code
+	and has the same capabilities.
+
+2010-09-19  Chris Morley
+	
+	* src/depict/depict.cpp: correct position and direction of wedge and
+	hash bonds. Deduce using TetStereoTo0D. May need further work.
+	
+	* include/openbabel/depict/painter.h(OBColor): add a few more named
+	colors,	color input from rgb hex (like #8dcb70), and a default color,
+	in case of typos.
+
+2010-09-19  Chris Morley
+
+	* include/openbabel/obconversion.h: expose Count (the input index)
+	 
+	* src/ops/addinindex.cpp, src/CMakeLists.txt: add an op to add Count
+	to title: --addinindex (Yes, awful names)
+
+	* src/obmolecformat.cpp, src/transform.cpp:
+	rename --addindex to --addoutindex.
+	
+	src/transform.cpp: -v option does nothing if parameter empty.
+	(ClassDescription)small documentation changes for -s, -v
+
+2010-09-19  Chris Morley
+
+	* src/stereo/perception.cpp(TetStereoTo0D):fix bug which was truncating
+	the loop without examining all possible bonds.
+	   
+	* include/openbabel/inchiformat.h: correct formating of Description
+	so will work with GUI (no \n\n inside option list).
+	
+	* src/formats/inchiformat.cpp: OBBond instead of OBEdgeBase, which
+	was removed a million years ago.
+	
+2010-09-17  Noel O'Boyle
+
+	* src/math/align.cpp, test/aligntest.cpp: Correct dumb error in
+	final line of calculation of RMSD.
+
+2010-09-15  Noel O'Boyle
+
+	* src/builder.cpp: When correcting stereo on rings, handle the case of
+	the lone pair. Thanks to Peter Lavin for reporting.
+
+2010-09-15  Noel O'Boyle
+
+	* src/formats/smilesformat.cpp: Handle chiral S with a lone pair in
+	the SMILES writer. Fixes PR#3058701. The test cases in the previous
+	commit log message should actually be C[S@](=O)Cl, etc. to be
+	chemically correct.
+
+2010-09-14  Noel O'Boyle
+
+	* src/formats/smilesformat.cpp: Handle chiral S with a lone pair and
+	in general, the situation where a chiral atom has a lone pair.
+	Test cases: C[S@](Br)I, [S@](C)(Br)I, C[C@-](Br)I, C[S@](=O)(=O)Cl.
+
+2010-09-14  Noel O'Boyle
+
+	* CMakeLists.txt: As discussed on list, don't build all bindings when
+	RUN_SWIG=ON (building some bindings may cause errors). Instead, the
+	option ALL_BINDINGS=ON will build all bindings.
+
+2010-09-10  Noel O'Boyle
+
+	* src/formats/pdbqtformat.cpp: Remove "ent" designation as this is
+	already used by the .pdb file format.
+
+2010-09-09  Noel O'Boyle
+
+	* scripts/python/pybel_py*.x.py: Synch with cinfony. Add support for
+	MCDL 2D coordinate generation when calling 'draw()'. MCDL is the
+	default. To use	OASA, specify method="oasa".
+
+2010-09-07  Geoffrey Hutchison  <babel@geoffhutchison.net>
+
+	* include/openbabel/base.h: Add new UNUSED() macro for unused
+	parameters.
+
+	* include/openbabel/forcefield.h: Use it.
+
+	* src/kekulize.cpp: Decrease recursion level from 31 to
+	24. Prevents some crashing / "infinite" loops on large fused-ring
+	systems.
+
+	* src/formats/pdbqtformat.cpp: Add new format from Stuart
+	Armstrong, InHiBOx.
+
+	* src/formats/CMakeLists.txt: Ditto.
+
+2010-08-26 Noel O'Boyle
+
+	* src/formats/mdlformat.cpp: Chris beat me to one fix (see below), but
+	I also added code to handle unspecified cis/trans stereo
+	* test/testsym.cpp: Correct test results and add some new ones for the
+	-as option (with 0D MDL).
+
+2010-08-26 Chris Morley
+
+	* src/depict/depict.cpp(DrawMolecule): fix so works with empty molecules
+	* src/formats/gamessukformat.cpp: fix typo
+	* src/formats/mdlformat.cpp: -as needs OBConversion::INOPTIONS
+	* src/obmolecformat.cpp: make -C option work again
+
+2010-08-24  Geoffrey Hutchison  <babel@geoffhutchison.net>
+
+	* include/openbabel/generic.h, src/generic.cpp: Improve on
+	functionality for OBOrbitalData -- including convenience functions
+	for loading lists of orbital energies.
+
+	* src/formats/gamessformat.cpp: Use it (closed-shell
+	calculations for now).
+
+	* src/formats/gaussformat.cpp: Grab new "z-matrix orientation"
+	coordinates given sometimes by Gaussian 09. Also add some
+	OBOrbitalData support.
+
+2010-08-24 Chris Morley
+
+	* src/format/mdlformat.cpp: add -aP format to read only title
+	and properties only. Speeds up filtering of sdf datasets based on
+	their properties.
+
+	* src/ops/opisomorph.cpp: "extract" parameter on -s option to
+	retain only matched atoms. Useful for preparing templates for
+	--gen2D
+
+	* src/alias.cpp(FormulaParse): return false when lower case letter
+	encountered. Reduce chance of misinterpretation in this backstop
+	function.
+
+	* src/depict/depict.cpp: output D and T
+
+	* src/formats/gaussformat.cpp: fix bug with diatomics looking for
+	"Rotational Constants" when ther is only one.
+
+	* windows-vc2008/Distribution/NSISScriptToCreateInstaller.nsi:
+	put shortcut to babel guide to http://baoilleach.webfactional.com
+	for the time being.
+
+2010-08-23 Noel O'Boyle
+
+	* src/formats/mdlformat.cpp: Make the "s" option work by resurrecting
+	some old code I had written and then subsequently removed. Atom
+	parities will now be used for 0D structures, but only if "s" is
+	specified.
+
+2010-08-23 Noel O'Boyle
+
+	* include/openbabel/stereo/stereo.h, perception.cpp: Add doxygen docs
+	for TetStereoTo0D and change return value to bool.
+
+2010-08-23  Geoffrey Hutchison  <babel@geoffhutchison.net>
+
+	* src/data.cpp (GetAtomicNum): Handle "Hl" hydrogen label from CIF
+	PR#3048959. Add warning when an unknown element label is provided.
+
+	* src/parsmart.cpp, include/openbabel/parsmart.h: Add thread-safe
+	SMARTS matching API, PR#3949927, thanks to David Koes.
+
+	* src/formats/mol2format.cpp: Disable tellg/seekg forwarding,
+	which is very slow with gzip-compressed mol2.gz
+	files. PR#3048758.
+
+	* src/formats/outformat.cpp: Handle new GAMESS-US/WinGAMESS output
+	files.
+
+	* src/kekulize.cpp: Add deeper recursion for aromaticity/kekule
+	determination. Solves a number of semi-rare molecules with 6+
+	fused 6-membered rings.
+
+	* test/files/forcefield.sdf: Fix Esomeprazole molecule -- not
+	protonated. This caused an impossible aromatization issue.
+
+	* test/files/*results.txt: Regenerate forcefield results.
+
+2010-08-22 Noel O'Boyle
+
+	* scripts/CMakeLists.txt: Should have been using STREQUAL
+	not EQUAL when comparing strings. The Ruby bindings (among
+	others) were not being installed to the correct location.
+
+2010-08-22 Chris Morley
+
+	It's a bit late for new features but the value of this one
+	shows up when writing command-line documentation.
+	* include/openbabel/obconversion.h, src/obconversion.cpp
+	(FullConvert,OpenAndSetFormat):	When file name starts with -:
+	it is treated as SMILES and put in a stringstream rather being
+	used to open a ifstream.
+
+	* tools/obabel.cpp: pass through files starting with "-:", e.g.
+	    obabel -:CN2C(=O)N(C)C(=O)C1=C2N=CN1C -ocan
+	Multiple use also possible. Not enabled in babel, but could be.
+
+	* src/obconversion.cpp: Comment out line end buffer deletion,
+	so cml conversion works but still have memory leak.
+
+2010-08-19 Noel O'Boyle
+
+	* scripts/CMakeLists.txt: Get rid of return() statements by
+	reorganising logic. The way it was, if there was a problem
+	with the Python bindings, it would never make it to the
+	Java bindings, etc.
+
+	Now each set of bindings has two 'if' statements: the first
+	decides whether or not to try to compile the bindings; the second
+	actually does it (running SWIG if requested beforehand).
+
+2010-08-19 Chris Morley
+
+	* windows-vc2008/Distribution/NSISScriptToCreateInstaller.nsi:
+	add the forgotten DLLs. Seems ok on XP but uninstall leaves some
+	folders in Windows 7.
+
 2010-08-18 Chris Morley
 
 	* src/formats/fastsearchformat.cpp: make work with deprecated -S option

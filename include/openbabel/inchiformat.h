@@ -9,7 +9,7 @@ IUPAC International Chemical Identifier (InChI) (contact:secretariat@iupac.org)
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation version 2 of the License.
- 
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -53,7 +53,7 @@ public:
 
   virtual const char* Description()
   {
-    return 
+    return
     "InChI format\n"
     "IUPAC/NIST molecular identifier\n\n"
 
@@ -69,25 +69,24 @@ public:
     "    \'Metal was disconnected\'\n"
     " a output auxilliary information\n"
     " l display InChI log\n"
-    "    Uniqueness options. See also --unique and --sort which are more vesatile.\n"
+    "    **Uniqueness options** (see also ``--unique`` and ``--sort`` which are more versatile)\n"
     " u output only unique molecules\n"
     " U output only unique molecules and sort them\n"
     " e compare first molecule to others\n"
-    "    This can also be done with InChICompare format\n"
-    "      babel first.smi second.mol third.cml -ok\n"
-    " T <param> truncate InChI, /nostereo etc.\n"
+    "    This can also be done with :ref:`InChICompare format <Compare_molecules_using_InChI>`::\n\n"
+    "      babel first.smi second.mol third.cml -ok\n\n"
+    " T <param> truncate InChI according to various parameters\n"
     "    See below for possible truncation parameters.\n"
-    "    These can be combined, e.g. /nochg/noiso\n"
+    "    These can be combined, e.g. ``/nochg/noiso``\n"
     " X <Option string> Additional InChI options\n"
     "    See InChI documentation.\n"
-    "    These options should be space delimited in a single quoted string.\n"
-    "    Structure perception (compatible with stdInChI)\n"                     
-    "     NEWPSOFF  DoNotAddH   SNon\n"
-    "    Stereo interpretation (produces non-standard InChI)\n"
-    "     SRel SRac SUCF ChiralFlagON ChiralFlagOFF\n"
-    "    InChI creation options (produces non-standard InChI)\n"
-    "     SUU SLUUD   FixedH  RecMet  KET  15T\n"
-    "    The following options are for convenience, e.g. -xF\n"
+    "    These options should be space delimited in a single quoted string.\n\n"
+    "    - Structure perception (compatible with stdInChI): ``NEWPSOFF``, ``DoNotAddH``, ``SNon``\n"
+    "    - Stereo interpretation (produces non-standard InChI): ``SRel``, ``SRac``,\n"
+    "      ``SUCF``, ``ChiralFlagON``, ``ChiralFlagOFF``\n"
+    "    - InChI creation options (produces non-standard InChI): ``SUU``, ``SLUUD``,\n"
+    "      ``FixedH``, ``RecMet``, ``KET``, ``15T``\n"
+    "    The following options are for convenience, e.g. ``-xF``\n"
     "    but produce non-standard InChI.\n"
     " F include fixed hydrogen layer\n"
     " M include bonds to metal\n\n"
@@ -97,7 +96,7 @@ public:
     " n molecule name follows InChI on same line\n"
     " a add InChI string to molecule name\n\n"
 
-    "Truncation parameters used with -xT:\n\n"
+    "Truncation parameters used with ``-xT``:\n\n"
     "/formula   formula only\n"
     "/connect   formula and connectivity only\n"
     "/nostereo  ignore E/Z and sp3 stereochemistry\n"
@@ -123,7 +122,7 @@ public:
   /// @param inchi The inchi string
   static bool EditInchi(std::string& inchi, std::string& spec);
 
-  ///Compare std::strings with embedded numbers so that 
+  ///Compare std::strings with embedded numbers so that
   // "a6b" (or "a06b") is less than "a15b"
   // and "CH4" is less than "C2H6"
   // and "CH4" is less than "ClH" (hydrogen chloride)
@@ -174,7 +173,7 @@ public:
   };
 
 private:
-  ///Erases the layer starting with \param str and, if \param all is true, all the subsequent ones 
+  ///Erases the layer starting with \param str and, if \param all is true, all the subsequent ones
   static void RemoveLayer (std::string& inchi, const std::string& str, bool all=false);
 
 private:
@@ -197,11 +196,15 @@ public:
   }
   virtual const char* Description() //required
   {
-    return 
+    return
       "Compare molecules using InChI\n"
-      "The first molecule is compared with the rest\n"
-      "e.g. babel first.smi second.mol third.cml -ok\n"
-      "Same as  -oinchi -xet  and can take the same options as InChI format.\n";
+      "A utility format that allows you to compare molecules using their InChIs\n"
+      "The first molecule is compared with the rest, e.g.::\n\n"
+
+      "  babel first.smi second.mol third.cml -ok\n\n"
+
+      "This is the same as using ``-oinchi -xet`` and can take the same options as InChI format\n"
+      "(see :ref:`InChI_format`).\n";
   }
   virtual bool WriteMolecule(OBBase* pOb, OBConversion* pConv);
   virtual unsigned int Flags() { return NOTREADABLE;};

@@ -1,15 +1,15 @@
 /**********************************************************************
 align.cpp - Align two molecules or vectors of vector3
- 
+
 Copyright (C) 2010 by Noel M. O'Boyle
- 
+
 This file is part of the Open Babel project.
 For more information, see <http://openbabel.sourceforge.net/>
- 
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation version 2 of the License.
- 
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -25,7 +25,10 @@ GNU General Public License for more details.
 #include <openbabel/graphsym.h>
 #include <openbabel/math/vector3.h>
 
-#include <Eigen/Dense>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+#include <Eigen/SVD>
+#include <Eigen/LU>
 
 using namespace std;
 
@@ -54,7 +57,7 @@ namespace OpenBabel
   }
 
   void OBAlign::VectorsToMatrix(const vector<vector3> *pcoords, Eigen::MatrixXd &coords) {
-    
+
     vector<vector3>::size_type N = pcoords->size();
     coords.resize(3, N);
 
@@ -120,8 +123,9 @@ namespace OpenBabel
     }
     SetRef(_refmol_coords);
 
-    if (_symmetry)
-      _aut = FindAutomorphisms((OBMol*)&refmol, _frag_atoms);
+    if (_symmetry) {
+      FindAutomorphisms((OBMol*)&refmol, _aut, _frag_atoms);
+    }
   }
 
   void OBAlign::SetTargetMol(const OBMol &targetmol) {
@@ -140,7 +144,7 @@ namespace OpenBabel
   {
     // Covariance matrix C = X times Y(t)
     Eigen::Matrix3d C = _mref * mtarget.transpose();
-    
+
     // Singular Value Decomposition of C into USV(t)
     Eigen::SVD<Eigen::Matrix3d> svd(C);
 
@@ -151,14 +155,14 @@ namespace OpenBabel
 
     // Optimal rotation matrix, U, is V T U(t)
     _rotMatrix = svd.matrixV() * T * svd.matrixU().transpose();
-    
+
     // Rotate target using rotMatrix
     _result = _rotMatrix.transpose() * mtarget;
 
     Eigen::MatrixXd deviation = _result - _mref;
     Eigen::MatrixXd sqr = deviation.cwise().square();
     double sum = sqr.sum();
-    _rmsd = sqrt( sum / sqr.size() );
+    _rmsd = sqrt( sum / sqr.cols() );
 
   }
 
@@ -175,7 +179,7 @@ namespace OpenBabel
       SimpleAlign(_mtarget);
     }
     else {  // Iterate over the automorphisms
-   
+
       // ...for storing the results from the lowest rmsd to date
       double min_rmsd = DBL_MAX;
       Eigen::MatrixXd result, rotMatrix;
@@ -183,13 +187,17 @@ namespace OpenBabel
       // Try all of the symmetry-allowed permutations
       OBIsomorphismMapper::Mappings::const_iterator cit;
       Eigen::MatrixXd mtarget(_mtarget.rows(), _mtarget.cols());
-      
+
       for (int k = 0; k < _aut.size(); ++k) {
         // Rearrange columns of _mtarget for this permutation
         int i=0;
         for (int j=1; j<=_prefmol->NumAtoms(); ++j) {
           if (_frag_atoms.BitIsSet(j)) {
-            mtarget.col(i) = _mtarget.col(_newidx[_aut[k][j - 1]]);
+            for (std::size_t l = 0; l < _aut[k].size(); ++l)
+              if (_aut[k][l].first == j - 1) {
+                mtarget.col(i) = _mtarget.col(_newidx[_aut[k][l].second]);
+                break;
+              }
             i++;
           }
         }
@@ -210,6 +218,23 @@ namespace OpenBabel
 
     _ready = true;
     return true;
+  }
+
+  matrix3x3 OBAlign::GetRotMatrix()
+  {
+    if (!_ready) {
+      obErrorLog.ThrowError(__FUNCTION__, "Rotation matrix not available until you call Align()" , obError);
+      return matrix3x3();
+    }
+
+    // Convert Eigen::Matrix to matrix3x3
+    double rot[3][3];
+    for (int row=0; row<3; ++row)
+       for (int col=0; col<3; ++col)
+         rot[row][col] = _rotMatrix(row, col);
+    matrix3x3 rotmat = matrix3x3(rot);
+
+    return rotmat;
   }
 
   vector<vector3> OBAlign::GetAlignment() {
@@ -281,7 +306,7 @@ namespace OpenBabel
       obErrorLog.ThrowError(__FUNCTION__, "RMSD not available until you call Align()" , obError);
       return (double) NULL;
     }
-    
+
     return _rmsd;
   }
 

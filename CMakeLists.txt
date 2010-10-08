@@ -26,7 +26,7 @@ set(BABEL_LIBRARY openbabel)
 if(EMBED_OPENBABEL)
   set(BABEL_VERSION  "${BABEL_MAJ_VER}.${BABEL_MIN_VER}.${BABEL_PATCH_VER}" PARENT_SCOPE)
 else(EMBED_OPENBABEL)
-  set(BABEL_VERSION  "${BABEL_MAJ_VER}.${BABEL_MIN_VER}.${BABEL_PATCH_VER}")  
+  set(BABEL_VERSION  "${BABEL_MAJ_VER}.${BABEL_MIN_VER}.${BABEL_PATCH_VER}")
 endif(EMBED_OPENBABEL)
 set(BABEL_DATADIR  "${CMAKE_INSTALL_PREFIX}/share/openbabel")
 
@@ -53,7 +53,7 @@ else(UNIX) # Windows - bin dir = lib dir to load libraries
   if(MSVC)
     set(OB_PLUGIN_INSTALL_DIR "${BIN_INSTALL_DIR}"
       CACHE PATH "Install dir for plugins")
-  else(MSVC)  
+  else(MSVC)
     if(ENABLE_VERSIONED_FORMATS)
       set(OB_PLUGIN_INSTALL_DIR "lib${LIB_SUFFIX}/openbabel/${BABEL_VERSION}"
         CACHE PATH "Install dir for plugins")
@@ -78,6 +78,7 @@ mark_as_advanced(CMAKE_LIBRARY_OUTPUT_DIRECTORY
 
 option(WITH_INCHI   "build inchi lib" ON)
 option(BUILD_SHARED "enable shared build support" ON)
+option(BUILD_MIXED "enable linux relocatable binaries support" OFF)
 if(BUILD_SHARED)
   set(BUILD_TYPE SHARED)
   set(PLUGIN_TYPE MODULE)
@@ -85,6 +86,14 @@ if(BUILD_SHARED)
 else(BUILD_SHARED)
   set(BUILD_TYPE STATIC)
   set(PLUGIN_TYPE STATIC)
+
+  if(MSVC)
+    # set cl flags for static compiling
+    set(CMAKE_CXX_FLAGS_RELEASE
+	"/MT /O2 /Ob2 /D NDEBUG")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE
+	"/INCREMENTAL:NO /NODEFAULTLIB:MSVCRT")
+  endif(MSVC)
 endif(BUILD_SHARED)
 
 if(WIN32)
@@ -106,6 +115,12 @@ if(ZLIB_FOUND)
   if(WIN32)
     add_definitions(-DDISABLE_WRITE_COMPRESSION)
   endif(WIN32)
+
+  # static build
+  if(NOT BUILD_SHARED)
+    set(STATIC_ZLIB_NAMES z.a zlib.a zdll.a libz.a)
+    find_library(ZLIB_LIBRARY NAMES ${STATIC_ZLIB_NAMES} )
+  endif(NOT BUILD_SHARED)
 endif(ZLIB_FOUND)
 # wxWidgets instructions based on http://wiki.wxwidgets.org/CMake
 #find_package(wxWidgets COMPONENTS base core REQUIRED)
@@ -256,7 +271,7 @@ if(${CMAKE_CXX_COMPILER_ID} MATCHES Intel AND UNIX)
 
   set(CMAKE_C_FLAGS_RELEASE "-O3 -ipo1 -DNDEBUG -Wl,-s")
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -ipo1 -DNDEBUG -Wl,-s")
-  
+
   # define WITH_SSE2 to enable the SSE2 instruction set.
   # Available on Pentium 4, Athlon 64, and newer CPUs.
   if(CMAKE_SIZEOF_VOID_P EQUAL 8 OR WITH_SSE2)
@@ -294,9 +309,9 @@ endif (NOT CMAKE_BUILD_TYPE)
 
 #define various build types
 if (CMAKE_COMPILER_IS_GNUCXX)
-  set (CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
-  set (CMAKE_CXX_FLAGS_DEBUG   "-g3 -fno-inline")
+  set (CMAKE_CXX_FLAGS_RELEASE        "${CMAKE_CXX_FLAGS_RELEASE} -O2 -DNDEBUG")
+  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O2 -g")
+  set (CMAKE_CXX_FLAGS_DEBUG          "${CMAKE_CXX_FLAGS_DEBUG} -g3 -fno-inline")
 endif (CMAKE_COMPILER_IS_GNUCXX)
 
 file(GLOB_RECURSE headers include/openbabel/*.h)
@@ -360,6 +375,9 @@ endif()
 # Should the language bindings be regenereted?
 option(RUN_SWIG "Generate language bindings with SWIG" OFF)
 
+# Should all bindings be built?
+option(ALL_BINDINGS "Build all languages bindings" OFF)
+
 # Should Python bindings be built?
 option(PYTHON_BINDINGS "Build Python bindings" OFF)
 
@@ -375,13 +393,13 @@ option(JAVA_BINDINGS "Build Java bindings" OFF)
 # Should CSharp bindings be built?
 option(CSHARP_BINDINGS "Build Csharp bindings" OFF)
 
-if (RUN_SWIG)
+if (ALL_BINDINGS)
   set(PYTHON_BINDINGS ON)
   set(RUBY_BINDINGS ON)
   set(PERL_BINDINGS ON)
   set(JAVA_BINDINGS ON)
   set(CSHARP_BINDINGS ON)
-endif (RUN_SWIG)
+endif (ALL_BINDINGS)
 
 add_subdirectory(scripts)
 

@@ -1,16 +1,16 @@
 /**********************************************************************
 base.h - Base class for OpenBabel objects
- 
+
 Copyright (C) 1998-2001 by OpenEye Scientific Software, Inc.
 Some portions Copyright (C) 2001-2006 by Geoffrey R. Hutchison
- 
+
 This file is part of the Open Babel project.
 For more information, see <http://openbabel.sourceforge.net/>
- 
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation version 2 of the License.
- 
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -28,8 +28,13 @@ GNU General Public License for more details.
 #include <iostream>
 #include <openbabel/tokenst.h>
 
-#ifndef UNUSED
-#define UNUSED(expr) { (void)(expr); }
+#ifdef UNUSED
+#elif defined(__GNUC__)
+# define UNUSED(x) UNUSED_ ## x __attribute__((unused))
+#elif defined(__LCLINT__)
+# define UNUSED(x) /*@unused@*/ x
+#else
+# define UNUSED(x) x
 #endif
 
 namespace OpenBabel
@@ -50,8 +55,8 @@ class OBConversion; //used only as pointer
   //! through all data to find a match with the supplied key. It is implemented
   //! as a set of unsigned integer constants for maximum flexibility and future
   //! expansion.
-  //! 
-  //! CustomData0 through CustomData15 are data slots that are not used in 
+  //!
+  //! CustomData0 through CustomData15 are data slots that are not used in
   //! OpenBabel directly and are meant for use in derivative programs.
   //! Macro definitions can be used to define what each data slot is used in your code.
   namespace OBGenericDataType
@@ -135,7 +140,7 @@ class OBConversion; //used only as pointer
 
       //! Vector Data (i.e., one vector like a dipole moment)
       VectorData =        25,
-      
+
       //! Matrix data (i.e., a 3x3 matrix like a rotation or quadrupole moment)
       MatrixData =        26,
 
@@ -170,7 +175,7 @@ class OBConversion; //used only as pointer
     };
   } // end namespace
   enum DataOrigin {
-    any,                 //!< Undefined or unspecified (default) 
+    any,                 //!< Undefined or unspecified (default)
     fileformatInput,     //!< Read from an input file
     userInput,           //!< Added by the user
     perceived,           //!< Perceived by Open Babel library methods
@@ -193,17 +198,17 @@ class OBConversion; //used only as pointer
                   const DataOrigin source = any);
     //Use default copy constructor and assignment operators
     //OBGenericData(const OBGenericData&);
-		
-    /* Virtual constructors added. see 
+
+    /* Virtual constructors added. see
        http://www.parashift.com/c++-faq-lite/abcs.html#faq-22.5
        to allow copying given only a base class OBGenericData pointer.
        It may be necessary to cast the return pointer to the derived class
-       type, since we are doing without Covariant Return Types 
+       type, since we are doing without Covariant Return Types
        http://www.parashift.com/c++-faq-lite/virtual-functions.html#faq-20.8
-    
+
        A derived class may return NULL if copying is inappropriate */
     virtual OBGenericData* Clone(OBBase* /*parent*/) const
-    { return NULL; } 
+    { return NULL; }
     virtual ~OBGenericData()    {}
     //Use default copy constructor and assignment operators
     //OBGenericData& operator=(const OBGenericData &src);
@@ -219,7 +224,7 @@ class OBConversion; //used only as pointer
     //! \return the data type for this object as defined in OBGenericDataType
     unsigned int                GetDataType()    const
     {        return(_type);    }
-    //! \brief Base class returns a default value (the attribute type) 
+    //! \brief Base class returns a default value (the attribute type)
     //! but should never be called
     virtual const std::string &GetValue()  const
     {			return _attr; }
@@ -229,7 +234,7 @@ class OBConversion; //used only as pointer
 
   //! A standard iterator over vectors of OBGenericData (e.g., inherited from OBBase)
   typedef std::vector<OBGenericData*>::iterator OBDataIterator;
-  
+
   //! Base Class
   // introduction in base.cpp
   class OBAPI OBBase
@@ -264,7 +269,7 @@ class OBConversion; //used only as pointer
       static const char* ClassDescription()
         {
           return "";
-        } 
+        }
 
       //! \brief By default clears the object. Called from ReadMolecule of most format classes
       template< class T >
@@ -279,7 +284,7 @@ class OBConversion; //used only as pointer
       //! \brief  Base type does nothing
       //! Made virtual around r3535 to simplify code which passes around OBBase*.
       //Currently no title data member in base class.
-      virtual const char  *GetTitle(bool replaceNewlines = true) const { UNUSED(replaceNewlines); return "";}
+      virtual const char  *GetTitle(bool UNUSED(replaceNewlines) = true) const { return "";}
       virtual void  SetTitle(const char *) {}
 
       //! \name Generic data handling methods (via OBGenericData)
@@ -307,7 +312,7 @@ class OBConversion; //used only as pointer
       //! \since version 2.2
       void                              CloneData(OBGenericData *d);
       //! \return the number of OBGenericData items attached to this molecule.
-      size_t                      DataSize() const 
+      size_t                      DataSize() const
         { return(_vdata.size()); }
       //! \return the first matching data for a given type from OBGenericDataType
       //!    or NULL if nothing matches

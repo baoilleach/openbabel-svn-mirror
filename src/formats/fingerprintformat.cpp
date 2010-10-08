@@ -1,10 +1,10 @@
 /**********************************************************************
 Copyright (C) 2005 by Chris Morley
- 
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation version 2 of the License.
- 
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -33,7 +33,7 @@ namespace OpenBabel
     virtual const char* Description() //required
     { return
       "Fingerprint format\n"
-      "Generate or display molecular fingerprints.\n" 
+      "Generate or display molecular fingerprints.\n"
       "This format constructs and displays fingerprints and (for multiple input objects)\n"
       "the Tanimoto coefficient and whether a superstructure of the first object.\n\n"
 
@@ -137,11 +137,11 @@ namespace OpenBabel
 
     if(pConv->IsOption("o"))
       return WriteHex(ofs, fptvec);
- 	
+
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
     if(pmol)
       ofs << ">" << pmol->GetTitle();
-    
+
     // checkmol-type output
     if(pConv->IsOption("s") || pConv->IsOption("u"))
     {
@@ -156,7 +156,7 @@ namespace OpenBabel
         obErrorLog.ThrowError(__FUNCTION__,
         "Bit descriptions are not available for this fingerprint type", obError, onceOnly);
 
-      ofs << descr;
+      ofs << '\n' << descr;
       return true;
     }
 
@@ -169,7 +169,7 @@ namespace OpenBabel
             for(;wd;wd=wd<<1)//count bits set by shifting into sign bit until word==0
               if(wd<0) ++bitsset;
           }
-        ofs  << "   " << bitsset << " bits set "; 
+        ofs  << "   " << bitsset << " bits set ";
       }
 
     if(pConv->GetOutputIndex()<=1)
@@ -180,9 +180,7 @@ namespace OpenBabel
           firstname=pmol->GetTitle();
         if(firstname.empty())
           firstname = "first mol";
-
-
-    }
+      }
     else
       {
         ofs << "   Tanimoto from " << firstname << " = " << OBFingerprint::Tanimoto(firstfp, fptvec);
@@ -190,7 +188,7 @@ namespace OpenBabel
           ofs << "\nPossible superstructure of " << firstname;
       }
     ofs << endl;
-	
+
     if(hexoutput)
       {
         WriteHex(ofs, fptvec);

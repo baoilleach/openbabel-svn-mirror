@@ -1,11 +1,11 @@
 /**********************************************************************
 fastsearchformat.cpp: Preparation and searching of fingerprint-based index files
 Copyright (C) 2005-2006 by Chris Morley
- 
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation version 2 of the License.
- 
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -29,7 +29,7 @@ class FastSearchFormat : public OBFormat
 {
 public:
 //Register this format type ID
-FastSearchFormat() : fsi(NULL) 
+FastSearchFormat() : fsi(NULL)
 {
   OBConversion::RegisterFormat("fs",this);
   //Specify the number of option taken by options
@@ -49,30 +49,34 @@ virtual const char* Description() //required
   "Fastsearch format\n"
   "Fingerprint-aided substructure and similarity searching\n\n"
 
-  "Writing to the fs format makes an index of a multi-molecule datafile:\n"
-  "      babel dataset.sdf -ofs\n"
-  "This prepares an index dataset.fs with default parameters, and is slow\n"
+  "Writing to the fs format makes an index of a multi-molecule datafile::\n\n"
+  "      babel dataset.sdf -ofs\n\n"
+  "This prepares an index :file:`dataset.fs` with default parameters, and is slow\n"
   "(~30 minutes for a 250,000 molecule file).\n\n"
 
-  "Reading from the fs format searches and is much faster, a few seconds,\n"
+  "However, when reading from the fs format searches are much faster, a few seconds,\n"
   "and so can be done interactively.\n\n"
-  "The search target is the parameter of the -s option and can be\n"
-  "slightly extended SMILES (with [#n] atoms and ~ bonds) or\n"
+  "The search target is the parameter of the ``-s`` option and can be\n"
+  "slightly extended SMILES (with ``[#n]`` atoms and ``~`` bonds) or\n"
   "the name of a file containing a molecule.\n\n"
 
-  "Several types of searches are possible:\n"
-  "- Identical molecule::\n"
-  "      babel index.fs outfile.yyy -s SMILES exact\n"
-  "- Substructure::\n"
+  "Several types of searches are possible:\n\n"
+  "- Identical molecule::\n\n"
+  "      babel index.fs outfile.yyy -s SMILES exact\n\n"
+  "- Substructure::\n\n"
   "      babel index.fs outfile.yyy  -s SMILES   or\n"
-  "      babel index.fs outfile.yyy  -s filename.xxx\n"
-  "   where xxx is a format id known to OpenBabel, e.g. sdf\n"
-  "- Molecular similarity based on Tanimoto coefficient::\n"
-  "      babel index.fs outfile.yyy -at15  -sSMILES (best 15 molecules)\n"
-  "      babel index.fs outfile.yyy -at0.7 -sSMILES  (Tanimoto >0.7)\n"
+  "      babel index.fs outfile.yyy  -s filename.xxx\n\n"
+  "  where ``xxx`` is a format id known to OpenBabel, e.g. sdf\n"
+  "- Molecular similarity based on Tanimoto coefficient::\n\n"
+  "      babel index.fs outfile.yyy -at15  -sSMILES  # best 15 molecules\n"
+  "      babel index.fs outfile.yyy -at0.7 -sSMILES  # Tanimoto >0.7\n"
   "      babel index.fs outfile.yyy -at0.7,0.9 -sSMILES\n"
-  "   (Tanimoto >0.7 && Tanimoto < 0.9)\n"
-  "The datafile plus the -ifs option can be used instead of the index file.\n\n"
+  "      #     Tanimoto >0.7 && Tanimoto < 0.9\n\n"
+  "The datafile plus the ``-ifs`` option can be used instead of the index file.\n\n"
+
+  ".. seealso::\n\n"
+
+  "    :ref:`fingerprints`\n\n"
 
   "Write Options (when making index) e.g. -xfFP3\n"
   " f# Fingerprint type\n"
@@ -81,11 +85,11 @@ virtual const char* Description() //required
   " u  Update an existing index\n\n"
 
   "Read Options (when searching) e.g. -at0.7\n"
-  " t# Do similarity search: #mols or # as min Tanimoto\n"
+  " t# Do similarity search:#mols or # as min Tanimoto\n"
   " a  Add Tanimoto coeff to title in similarity search\n"
   " l# Maximum number of candidates. Default<4000>\n"
   " e  Exact match\n"
-  "     Alternative to using exact in -s parameter, see above\n"  
+  "     Alternative to using exact in ``-s`` parameter, see above\n"
   " n  No further SMARTS filtering after fingerprint phase\n\n"
   ;
 };
@@ -155,13 +159,13 @@ virtual const char* Description() //required
         obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obError);
         return false;
       }
-    
+
     vector<OBMol> patternMols;
     if(!ObtainTarget(pConv, patternMols, indexname))
       return false;
 
     bool exactmatch = pConv->IsOption("e",OBConversion::INOPTIONS)!=NULL;// -ae option
-    
+
     //Open the datafile and put it in pConv
     //datafile name derived from index file probably won't have a file path
     //but indexname may. Derive a full datafile name
@@ -171,7 +175,7 @@ virtual const char* Description() //required
       path = datafilename;
     else
       path = indexname.substr(0,pos+1) + datafilename;
-	
+
     ifstream datastream(path.c_str());
     if(!datastream)
       {
@@ -180,7 +184,7 @@ virtual const char* Description() //required
         return false;
       }
     pConv->SetInStream(&datastream);
-	
+
     //Input format is currently fs; set it appropriately
     if(!pConv->SetInAndOutFormats(pConv->FormatFromExt(datafilename.c_str()),pConv->GetOutFormat()))
 			return false;
@@ -209,12 +213,12 @@ virtual const char* Description() //required
             double MinTani = atof( txt.substr( 0, pos ).c_str() );
             fs.FindSimilar(&patternMols[0], SeekposMap, MinTani, MaxTani);
           }
-		
+
         //Don't want to filter through SMARTS filter
         pConv->RemoveOption("s", OBConversion::GENOPTIONS);
         //also because op names are case independent
         pConv->RemoveOption("S", OBConversion::GENOPTIONS);
-		
+
         multimap<double, unsigned int>::reverse_iterator itr;
         for(itr=SeekposMap.rbegin();itr!=SeekposMap.rend();++itr)
           {
@@ -228,11 +232,11 @@ virtual const char* Description() //required
                 stringstream ss;
                 ss << " " << itr->first;
                 pConv->AddOption("addtotitle",OBConversion::GENOPTIONS, ss.str().c_str());
-			
+
               }
             pConv->SetOneObjectOnly();
             if(itr != --SeekposMap.rend())
-              pConv->SetMoreFilesToCome();//so that not seen as last on output 
+              pConv->SetMoreFilesToCome();//so that not seen as last on output
             pConv->Convert(NULL,NULL);
           }
       }
@@ -244,7 +248,7 @@ virtual const char* Description() //required
       p = pConv->IsOption("l",OBConversion::INOPTIONS);
       if(p && atoi(p))
         MaxCandidates = atoi(p);
-	
+
       vector<unsigned int> SeekPositions;
 
       if(exactmatch)
@@ -267,7 +271,7 @@ virtual const char* Description() //required
         clog << SeekPositions.size() << " candidates from fingerprint search phase" << endl;
       }
 
-      vector<unsigned int>::iterator seekitr, 
+      vector<unsigned int>::iterator seekitr,
           begin = SeekPositions.begin(), end = SeekPositions.end();
 
       if(patternMols.size()>1)//only sort and elininate duplicates if necessary
@@ -291,7 +295,7 @@ virtual const char* Description() //required
         pConv->SetFirstInput(false); //needed for OpSort
       }
     }
-    return false;	//To finish	
+    return false;	//To finish
   }
 
   /////////////////////////////////////////////////////
@@ -326,7 +330,7 @@ virtual const char* Description() //required
         auditMsg += description.substr( 0, description.find('\n') );
         obErrorLog.ThrowError(__FUNCTION__,auditMsg,obAuditMsg);
 
-        FptIndex* pidx; //used with update
+        FptIndex* pidx=NULL; //used with update
 
         //if(pOs==&cout) did not work with GUI
         if(!dynamic_cast<ofstream*>(pOs))
@@ -363,6 +367,7 @@ virtual const char* Description() //required
                 obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obError);
                 static_cast<ofstream *>(pOs)->close(); // close the file before quitting
                 delete pOs;
+                delete pidx; // remove possible memory leak
                 return false;
               }
             NewOstreamUsed=true;
@@ -406,7 +411,7 @@ virtual const char* Description() //required
           clog << "\nIt contains " << nmols << " molecules" << flush;
 
         sw.Start();
-		
+
         if(update)
           {
             fsi = new FastSearchIndexer(pidx, pOs, nmols);//using existing index
@@ -417,7 +422,7 @@ virtual const char* Description() //required
           }
         else
           fsi = new FastSearchIndexer(datafilename, pOs, fpid, nbits, nmols);
-		
+
         obErrorLog.StopLogging();
       }
 
@@ -426,9 +431,9 @@ virtual const char* Description() //required
     OBMol* pmol = dynamic_cast<OBMol*> (pOb);
     if(pmol)
       pmol->ConvertDativeBonds();//use standard form for dative bonds
-	
+
     streampos seekpos = pConv->GetInPos();
-    if(!update || seekpos>LastSeekpos) 
+    if(!update || seekpos>LastSeekpos)
     {
       fsi->Add(pOb, seekpos );
       if(pConv->GetOutputIndex()==400 && nmols>1000)
@@ -449,7 +454,7 @@ virtual const char* Description() //required
 
     if(pConv->IsLast())
       {
-        //Last pass 
+        //Last pass
         delete fsi; //saves index file
         if(NewOstreamUsed)
           delete pOs;
@@ -482,7 +487,7 @@ virtual const char* Description() //required
     patternMol.SetIsPatternStructure();
 
     const char* p = pConv->IsOption("s",OBConversion::GENOPTIONS);
-    
+
     bool OldSOption=false;
     //If no -s option, make OBMol from file in -S option or -aS option (both deprecated)
     if(!p)
@@ -490,13 +495,13 @@ virtual const char* Description() //required
       p = pConv->IsOption("S",OBConversion::GENOPTIONS);
       if(!p)
         p = pConv->IsOption("S",OBConversion::INOPTIONS);//for GUI mainly
-      OldSOption = true; 
+      OldSOption = true;
     }
-    if(p) 
+    if(p)
     {
       vector<string> vec;
       tokenize(vec, p);
-      
+
       //ignore leading ~ (not relevant to fastsearch)
       if(vec[0][0]=='~')
         vec[0].erase(0,1);
@@ -537,7 +542,7 @@ virtual const char* Description() //required
         }
 
         bool hasTildeBond;
-        if(hasTildeBond = (txt.find('~')!=string::npos))
+        if( (hasTildeBond = (txt.find('~')!=string::npos)) ) // extra parens to indicate truth value
         {
           //Find ~ bonds and make versions of query molecule with a single and aromatic bonds
           //To avoid having to parse the SMILES here, replace ~ by $ (quadruple bond)
@@ -585,8 +590,8 @@ virtual const char* Description() //required
       string id(header.fpid);
       if(id.empty())
         id = "default";
-      clog << indexname << " is an index of\n " << header.datafilename 
-           << ".\n It contains " << header.nEntries 
+      clog << indexname << " is an index of\n " << header.datafilename
+           << ".\n It contains " << header.nEntries
            << " molecules. The fingerprint type is " << id << " with "
            << OBFingerprint::Getbitsperint() * header.words << " bits.\n"
            << "Typical usage for a substructure search:\n"
@@ -627,7 +632,7 @@ virtual const char* Description() //required
   indices of the bond's atoms and change the bond's order.
   ObtainTarget() will return a vector of OBMol and the Find() in L260 will be done
   for each. All fs matches will go into SeekPositions. At the end this
-  will be sorted and duplicates removed with unique.  
+  will be sorted and duplicates removed with unique.
   */
 
 }//Openbabel

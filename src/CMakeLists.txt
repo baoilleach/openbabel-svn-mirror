@@ -56,7 +56,9 @@ set(math_srcs
 endif (EIGEN2_FOUND)
 
 set(ops
+  ops/addinindex.cpp
   ops/addpolarh.cpp
+  ops/canonical.cpp
   ops/gen2D.cpp
   ops/fillUC.cpp
   ops/forcefield.cpp
@@ -78,6 +80,7 @@ endif (EIGEN2_FOUND)
 
 set(stereo_srcs
     stereo/stereo.cpp
+    stereo/stereoutil.cpp
     stereo/tetranonplanar.cpp
     stereo/tetraplanar.cpp
     stereo/squareplanar.cpp
@@ -164,7 +167,7 @@ set(openbabel_library_srcs
   ${headers}
   "${openbabel_BINARY_DIR}/include/openbabel/babelconfig.h"
   )
-if(NOT MSVC)
+if(NOT MSVC AND BUILD_SHARED)
   set(openbabel_library_srcs
     ${openbabel_library_srcs}
     ${charges}
@@ -173,24 +176,38 @@ if(NOT MSVC)
     ${forcefields}
     ${ops}
     )
-endif(NOT MSVC)
+endif(NOT MSVC AND BUILD_SHARED)
+
+if(WIN32)
+  set(libs ${libs} ${ZLIB_LIBRARY})
+else(WIN32)
+  # the C math library
+  set(libs ${libs} m)
+  if(BUILD_SHARED)
+    # dl library if it is found and we are doing a shared build
+    if(HAVE_LIBDL)
+      set(libs ${libs} dl)
+    endif(HAVE_LIBDL)
+    # shared zlib
+    if(ZLIB_FOUND)
+      set(libs ${libs} ${ZLIB_LIBRARY})
+    endif(ZLIB_FOUND)
+  else(BUILD_SHARED)
+    # static zlib
+    if(ZLIB_FOUND)
+      set(ZLIB_NAMES z.a zdll.a zlib.a libz.a)
+      find_library(ZLIB_STATIC_LIBRARY NAMES ${ZLIB_NAMES})
+      set(libs ${libs} ${ZLIB_STATIC_LIBRARY})
+    endif(ZLIB_FOUND)
+  endif(BUILD_SHARED)
+endif(WIN32)
 
 add_library(openbabel ${BUILD_TYPE}
   ${openbabel_library_srcs}
   )
 
-if(NOT WIN32)
-  set(libs ${libs} m)
-  if(HAVE_LIBDL)
-    set(libs ${libs} dl)
-  endif(HAVE_LIBDL)
-endif(NOT WIN32)
+target_link_libraries(openbabel ${libs})
 
-if(ZLIB_FOUND)
-  target_link_libraries(openbabel ${libs} ${ZLIB_LIBRARY})
-else(ZLIB_FOUND) # omit zlib reference
-  target_link_libraries(openbabel ${libs})
-endif(ZLIB_FOUND)
 set_target_properties(openbabel PROPERTIES
   VERSION ${LIBRARY_VERSION}
   SOVERSION ${SOVERSION}
@@ -213,7 +230,7 @@ install(TARGETS openbabel
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
 )
 
-if(MSVC)
+if(MSVC AND BUILD_SHARED)
   foreach(plugingroup descriptors fingerprints forcefields ops charges)
     add_library(plugin_${plugingroup} ${PLUGIN_TYPE} ${${plugingroup}}
       "${openbabel_BINARY_DIR}/include/openbabel/babelconfig.h")
@@ -228,6 +245,6 @@ if(MSVC)
       SUFFIX ${MODULE_EXTENSION}
       LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
   endforeach(plugingroup)
-endif(MSVC)
+endif(MSVC AND BUILD_SHARED)
 
 add_subdirectory(formats)

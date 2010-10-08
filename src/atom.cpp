@@ -1,17 +1,17 @@
 /**********************************************************************
 atom.cpp - Handle OBAtom class.
- 
+
 Copyright (C) 1998-2001 by OpenEye Scientific Software, Inc.
 Some portions Copyright (C) 2001-2008 by Geoffrey R. Hutchison
 Some portions Copyright (C) 2003 by Michael Banck
- 
+
 This file is part of the Open Babel project.
 For more information, see <http://openbabel.sourceforge.net/>
- 
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation version 2 of the License.
- 
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -28,11 +28,6 @@ GNU General Public License for more details.
 
 #include <openbabel/math/matrix3x3.h>
 
-// jiahao@mit.edu
-//#include <charges/qeq.h>
-//#include <charges/qtpie.h>
-// end jiahao
-
 #if !HAVE_STRNCASECMP
 extern "C" int strncasecmp(const char *s1, const char *s2, size_t n);
 #endif
@@ -44,13 +39,13 @@ namespace OpenBabel
 
   /** \class OBAtom atom.h <openbabel/atom.h>
       \brief Atom class
- 
+
       To understand the OBAtom class it is important to state a key
       decision on which the design was based. The OBAtom class not only
       holds data, but facilitates extraction of data perceived from both
       the atom and the molecule. This prevents the OBMol class from
       becoming overly large and complicated.
- 
+
       A number of data extraction methods perform what is called
       <a href="http://en.wikipedia.org/wiki/Lazy_evaluation">`Lazy Evaluation,'</a>
       which is essentially on-the-fly evaluation.
@@ -62,7 +57,7 @@ namespace OpenBabel
       trait of additional atoms or bonds.The OBAtom class is similar to
       OBMol and the whole of Open Babel in that data access and modification
       is done through Get and Set methods.
- 
+
       The following code demonstrates how to print out the atom numbers,
       element numbers, and coordinates of a molecule:
       \code
@@ -148,6 +143,7 @@ namespace OpenBabel
     _vbond.clear();
     _vbond.reserve(4);
     _residue = (OBResidue*)NULL;
+    _id = NoId;
 
     return(OBBase::Clear());
   }
@@ -162,12 +158,12 @@ namespace OpenBabel
     }
     return(*this);
   }
-  
+
   void OBAtom::Duplicate(OBAtom *src)
   {
     if (!src)
       return;
-      
+
     _hyb = src->GetHyb();
     _ele = src->GetAtomicNum();
     _isotope = src->GetIsotope();
@@ -179,7 +175,7 @@ namespace OpenBabel
     _v = src->GetVector();
     _flags = src->GetFlag();
     _residue = (OBResidue*)NULL;
-    
+
     _vdata.clear();
     //Copy all the OBGenericData, providing the new atom
     vector<OBGenericData*>::iterator itr;
@@ -492,7 +488,7 @@ namespace OpenBabel
         ttab.SetToType("INT");
         snprintf(num, 6, "%d", GetAtomicNum());
         ttab.Translate(_type, num);
-	
+
         ttab.SetFromType(fromType.c_str());
         ttab.SetToType(toType.c_str());
       }
@@ -569,12 +565,6 @@ namespace OpenBabel
         phmodel.AssignSeedPartialCharge(*((OBMol*)GetParent()));
         OBGastChrg gc;
         gc.AssignPartialCharges(*((OBMol*)GetParent()));
-	
-	/* jiahao@mit.edu - force use of QTPIE
-	obErrorLog.ThrowError(__FUNCTION__, "Force use of QTPIE", obInfo);
-	QTPIECharges charge;
-	charge.AssignPartialCharges(*mol);
-	/* end jiahao */
       }
 
     return(_pcharge);
@@ -1686,7 +1676,7 @@ namespace OpenBabel
       return true;
     if (_ele == 7) {
       // N+ ions and sp2 hybrid N with 3 valences should not be Hbond acceptors
-      if (!((GetValence() == 4 && GetHyb() == 3) 
+      if (!((GetValence() == 4 && GetHyb() == 3)
             || (GetValence() == 3 && GetHyb() == 2)))
             return true;
     }
