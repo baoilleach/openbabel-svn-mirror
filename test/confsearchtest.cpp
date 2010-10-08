@@ -24,7 +24,9 @@ void test_simple()
   cout << mol.NumAtoms() << endl;
 
   OBBuilder builder;
-  builder.Build(mol, true);
+  builder.SetKeepRings();
+  builder.Build(mol);
+  
 
   mol.AddHydrogens();
 
