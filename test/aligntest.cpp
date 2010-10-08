@@ -339,10 +339,15 @@ void testQCP()
     }
 
     OBAlign align(ref, target);
+    align.SetMethod(OBAlign::Kabsch);
     align.Align();
     double rmsd = align.GetRMSD();
-    cout << "RMSD = " << rmsd << endl;
+    OB_ASSERT(fabs(rmsd - 0.719) < 0.001);
 
+    align.SetMethod(OBAlign::QCP);
+    align.Align();
+    rmsd = align.GetRMSD();
+    OB_ASSERT(fabs(rmsd - 0.719) < 0.001);
 
 }
 
@@ -354,7 +359,7 @@ int main()
     snprintf(env, BUFF_SIZE, "BABEL_LIBDIR=%s", FORMATDIR);
     putenv(env);
   #endif  
-/*
+
   test_simpleAlign();
 
   test_RMSD();
@@ -366,7 +371,7 @@ int main()
   test_alignWithoutHydrogens();
 
   test_alignWithSymWithoutHydrogens();
-*/
+
   testQCP();
   return 0;
 }
