@@ -446,7 +446,7 @@ void UpdateConformersFromTree(OBMol* mol, vector<double> &energies, OBDiversePos
     
   // Loop through the confs and filter using a tree
   newconfs.clear();
-  OBDiversePoses newtree(*mol, cutoff, false);
+  OBDiversePoses newtree(*mol, cutoff, true);
   for (vpp::iterator conf = confs.begin(); conf!=confs.end(); ++conf) {
     if (newtree.AddPose(conf->first, conf->second)) {
       newconfs.push_back(*conf);

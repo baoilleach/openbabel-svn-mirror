@@ -39,18 +39,18 @@ if(BUILD_SHARED)
   endforeach(tool)
 
   if(NOT MINIMAL_BUILD)
-    # obspectrophore -- requires getopt
+    # confab -- requires getopt
     if (NOT GETOPT_FOUND)
-      add_executable(obspectrophore obspectrophore.cpp getopt.c)
+      add_executable(confab confab.cpp getopt.c)
     else(NOT GETOPT_FOUND)
-      add_executable(obspectrophore obspectrophore.cpp)
+      add_executable(confab confab.cpp)
     endif(NOT GETOPT_FOUND)
-    target_link_libraries(obspectrophore ${BABEL_LIBRARY})
+    target_link_libraries(confab ${BABEL_LIBRARY})
     if(MSVC)
-      set_target_properties(obspectrophore PROPERTIES
+      set_target_properties(confab PROPERTIES
           RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
     endif(MSVC)
-    install(TARGETS obspectrophore
+    install(TARGETS confab
                     RUNTIME DESTINATION bin
                     LIBRARY DESTINATION lib
                     ARCHIVE DESTINATION lib

@@ -260,10 +260,10 @@ namespace OpenBabel
       }
 
       if (N_fold_symmetry  > 1) {
-        cout << "Removed torsions due to combined " << N_fold_symmetry << "-fold symmetry from atoms " << 
-          begin->GetIdx() << " to " << end->GetIdx() << ".\n";
+        //cout << "Removed torsions due to combined " << N_fold_symmetry << "-fold symmetry from atoms " << 
+        //  begin->GetIdx() << " to " << end->GetIdx() << ".\n";
         rotor->RemoveSymTorsionValues(N_fold_symmetry);
-        cout << "Now this torsion has " << rotor->Size() << " settings.\n";
+        //cout << "Now this torsion has " << rotor->Size() << " settings.\n";
       }
     }
  }
