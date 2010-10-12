@@ -80,7 +80,7 @@ int main(int argc,char **argv)
 
           piFormat = conv.FindFormat(iext);
 	  
-          if(poFormat==NULL)
+          if(piFormat==NULL)
             {
               cerr << program_name << ": cannot read input format!" << endl;
               exit(-1);
