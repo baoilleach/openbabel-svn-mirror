@@ -38,41 +38,24 @@ if(BUILD_SHARED)
     )
   endforeach(tool)
 
-  if(NOT MINIMAL_BUILD)
-    # confab -- requires getopt
+  foreach(tool confab calcrmsd)
     if (NOT GETOPT_FOUND)
-      add_executable(confab confab.cpp getopt.c)
+      add_executable(${tool} ${tool}.cpp getopt.c)
     else(NOT GETOPT_FOUND)
-      add_executable(confab confab.cpp)
+      add_executable(${tool} ${tool}.cpp)
     endif(NOT GETOPT_FOUND)
-    target_link_libraries(confab ${BABEL_LIBRARY})
+    target_link_libraries(${tool} ${BABEL_LIBRARY})
     if(MSVC)
-      set_target_properties(confab PROPERTIES
+      set_target_properties(${tool} PROPERTIES
           RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
     endif(MSVC)
-    install(TARGETS confab
+    install(TARGETS ${tool}
                     RUNTIME DESTINATION bin
                     LIBRARY DESTINATION lib
                     ARCHIVE DESTINATION lib
     )
+  endforeach(tool)
 
-    # obgrep -- requires getopt
-    if (NOT GETOPT_FOUND)
-      add_executable(obgrep obgrep.cpp getopt.c)
-    else(NOT GETOPT_FOUND)
-      add_executable(obgrep obgrep.cpp)
-    endif(NOT GETOPT_FOUND)
-      target_link_libraries(obgrep ${BABEL_LIBRARY})
-      if(MSVC)
-        set_target_properties(obgrep PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-      endif(MSVC)
-      install(TARGETS obgrep
-                      RUNTIME DESTINATION bin
-                      LIBRARY DESTINATION lib
-                      ARCHIVE DESTINATION lib
-      )
-  endif(NOT MINIMAL_BUILD)
 else(BUILD_SHARED)
   if (NOT MSVC)
     if (BUILD_MIXED)

@@ -193,7 +193,6 @@ int main(int argc,char **argv)
   conv.SetInStream(&ifs);
   conv.SetOutStream(&ofs);
   conv.SetInAndOutFormats(piFormat, poFormat);
-  conv.AddOption("writeconformers", OBConversion::GENOPTIONS);
 
   cout << "**Starting Confab " << CONFAB_VER << endl;
   cout << "..Input file = " << inputfile << endl;
