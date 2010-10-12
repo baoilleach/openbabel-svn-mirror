@@ -37,9 +37,10 @@ namespace OpenBabel
 {
   // log levels
 #define OBFF_LOGLVL_NONE	0   //!< no output
-#define OBFF_LOGLVL_LOW		1   //!< SteepestDescent progress... (no output from Energy())
-#define OBFF_LOGLVL_MEDIUM	2   //!< individual energy terms
-#define OBFF_LOGLVL_HIGH	3   //!< individual calculations and parameters
+#define OBFF_LOGLVL_LOWER		1   //!< Confab!
+#define OBFF_LOGLVL_LOW		2   //!< SteepestDescent progress... (no output from Energy())
+#define OBFF_LOGLVL_MEDIUM	3   //!< individual energy terms
+#define OBFF_LOGLVL_HIGH	4   //!< individual calculations and parameters
 
   // terms
 #define OBFF_ENERGY		(1 << 0)   //!< all terms
@@ -69,6 +70,7 @@ namespace OpenBabel
 #define KCAL_TO_KJ	4.1868
 
   // inline if statements for logging.
+#define IF_OBFF_LOGLVL_LOWER    if(_loglvl >= OBFF_LOGLVL_LOWER)
 #define IF_OBFF_LOGLVL_LOW    if(_loglvl >= OBFF_LOGLVL_LOW)
 #define IF_OBFF_LOGLVL_MEDIUM if(_loglvl >= OBFF_LOGLVL_MEDIUM)
 #define IF_OBFF_LOGLVL_HIGH   if(_loglvl >= OBFF_LOGLVL_HIGH)

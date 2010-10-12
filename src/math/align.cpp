@@ -127,6 +127,10 @@ namespace OpenBabel
 
     if (_symmetry) {
       FindAutomorphisms((OBMol*)&refmol, _aut, _frag_atoms);
+      if (_aut.size() > 1)
+        cout << "..molecule has " << _aut.size() << " isomorphisms\n";
+      else
+        cout << "..molecule has no isomorphisms\n";
     }
   }
 

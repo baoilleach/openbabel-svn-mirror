@@ -295,6 +295,7 @@ namespace OpenBabel
     OBRotorList rl;
     OBBitVec fixed = _constraints.GetFixedBitVec();
     rl.SetFixAtoms(fixed);
+    rl.SetQuiet();
     rl.Setup(_mol);
 
     OBRotorIterator ri;
@@ -499,6 +500,8 @@ int OBForceField::DiverseConfGen(double rmsd, unsigned int nconfs, double energy
     OBRotorList rl;
     OBBitVec fixed = _constraints.GetFixedBitVec();
     rl.SetFixAtoms(fixed);
+    if (_loglvl == 0)
+      rl.SetQuiet(); // Don't print info on symmetry removal
     rl.Setup(_mol);
 
     OBRotorIterator ri;
@@ -521,6 +524,12 @@ int OBForceField::DiverseConfGen(double rmsd, unsigned int nconfs, double energy
       rotorKeys.AddRotor(size);
       combinations *= size;
       rotor_sizes.push_back(size);
+      IF_OBFF_LOGLVL_LOWER {
+        stringstream ss;
+        ss << "....rotor " << i << " from " << rotor->GetBond()->GetBeginAtomIdx() << " to ";
+        ss << rotor->GetBond()->GetEndAtomIdx() << " has " << size << " values" << endl;
+        OBFFLog(ss.str());
+      }
     }
     cout << "..tot conformations = " << combinations << "\n";
 
