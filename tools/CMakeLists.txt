@@ -1,6 +1,5 @@
 if(MINIMAL_BUILD)
   set(tools
-        babel
   )
 else(MINIMAL_BUILD)
   set(tools

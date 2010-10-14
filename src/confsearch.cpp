@@ -50,7 +50,7 @@ namespace OpenBabel
      *     } while (d != 1);
      **/
   public:
-    LFSR::LFSR(unsigned int range, unsigned int start);
+    LFSR(unsigned int range, unsigned int start);
     unsigned int GetNext(); // Return 1 when finished
   private:
     unsigned int _range, _lfsr, _poly;
