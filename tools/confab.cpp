@@ -231,7 +231,12 @@ void Confab::Run()
     cout << "**Molecule " << N << endl << "..title = " << mol.GetTitle() << endl;
     cout << "..number of rotatable bonds = " << mol.NumRotors() << endl;
     mol.AddHydrogens();
-    pff->Setup(mol);
+    bool success = pff->Setup(mol);
+    if (!success) {
+      cout << "!!Cannot set up forcefield for this molecule\n"
+           << "!!Skipping\n" << endl;
+      continue;
+    }
     pff->DiverseConfGen(rmsd_cutoff, conf_cutoff, energy_cutoff);
 
     pff->GetConformers(mol);

@@ -487,13 +487,14 @@ int OBForceField::DiverseConfGen(double rmsd, unsigned int nconfs, double energy
 
     if (_mol.NumRotors() == 0) {
       SetupPointers();
-      _energies.push_back(Energy());
+      _energies.push_back(Energy(false));
+      delete [] store_initial;
       return 0;
     }
   
     // Get estimate of lowest energy conf using FastRotorSearch
     FastRotorSearch(true);
-    double lowest_energy = Energy();
+    double lowest_energy = Energy(false);
 
     int origLogLevel = _loglvl;
 

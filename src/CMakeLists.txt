@@ -78,6 +78,15 @@ set(ops
 )
 endif (EIGEN2_FOUND)
 
+if (MINIMAL_BUILD)
+    set(ops)
+    set(descriptors)
+    set(fingerprints)
+    set(charges)
+    set(forcefields
+        forcefields/forcefieldmmff94.cpp)
+endif (MINIMAL_BUILD)
+
 set(stereo_srcs
     stereo/stereo.cpp
     stereo/stereoutil.cpp

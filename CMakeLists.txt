@@ -76,7 +76,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib${LIB_SUFFIX}"
 mark_as_advanced(CMAKE_LIBRARY_OUTPUT_DIRECTORY
   CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 
-option(WITH_INCHI   "build inchi lib" ON)
+option(WITH_INCHI   "build inchi lib" OFF)
 option(BUILD_SHARED "enable shared build support" ON)
 option(BUILD_MIXED "enable linux relocatable binaries support" OFF)
 if(BUILD_SHARED)
@@ -336,6 +336,8 @@ find_package(Eigen2) # find and setup Eigen2
 if (EIGEN2_FOUND)
 add_definitions (-DHAVE_EIGEN2)
 include_directories(${EIGEN2_INCLUDE_DIR})
+else(EIGEN2_FOUND)
+message(FATAL_ERROR "Eigen2 is required but was not found. You should specify the folder with -DEIGEN2_INCLUDE_DIR.")
 endif(EIGEN2_FOUND)
 #cjh
 
@@ -348,8 +350,8 @@ add_subdirectory(tools)
 # Should we build the GUI? Default is yes on Linux or Windows, not Mac.
 if (APPLE)
 option(BUILD_GUI "Build the GUI" OFF)
-elseif (APPLE)
-option(BUILD_GUI "Build the GUI" ON)
+else (APPLE)
+option(BUILD_GUI "Build the GUI" OFF)
 endif(APPLE)
 
 if(BUILD_GUI)
@@ -360,12 +362,12 @@ if(BUILD_GUI)
   else(wxWidgets_FOUND)
     message("   wxWidgets not found => GUI will not be built")
   endif(wxWidgets_FOUND)
-elseif(BUILD_GUI)
+else(BUILD_GUI)
   message("GUI will not be built")
 endif(BUILD_GUI)
 
 # Do we want to build the tests?
-option(ENABLE_TESTS "Enable unit tests" ON)
+option(ENABLE_TESTS "Enable unit tests" OFF)
 if(ENABLE_TESTS)
   include(CTest)
   enable_testing()
@@ -404,7 +406,7 @@ endif (ALL_BINDINGS)
 add_subdirectory(scripts)
 
 # A minimal build with just two formats (SMI, SDF) useful for developers
-option(MINIMAL_BUILD "Disable full build" OFF)
+option(MINIMAL_BUILD "Disable full build" ON)
 
 # Create the Config and ConfigVersion files in the build directory, useful to
 # build against an uninstalled OpenBabel build. Simply set OpenBabel2_DIR to
