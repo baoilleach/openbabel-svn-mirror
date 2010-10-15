@@ -241,7 +241,7 @@ install(TARGETS openbabel
 )
 
 if(MSVC AND BUILD_SHARED)
-  foreach(plugingroup descriptors fingerprints forcefields ops charges)
+  foreach(plugingroup forcefields)
     add_library(plugin_${plugingroup} ${PLUGIN_TYPE} ${${plugingroup}}
       "${openbabel_BINARY_DIR}/include/openbabel/babelconfig.h")
     target_link_libraries(plugin_${plugingroup} ${libs} openbabel)
