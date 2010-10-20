@@ -518,7 +518,7 @@ int OBForceField::DiverseConfGen(double rmsd, unsigned int nconfs, double energy
 
     OBRotorKeys rotorKeys;
     OBRotor* rotor = rl.BeginRotor(ri);
-    unsigned long int combinations = 1;
+    unsigned int combinations = 1;
     vector<size_t> rotor_sizes;
     for (int i = 1; i < rl.Size() + 1; ++i, rotor = rl.NextRotor(ri)) { // foreach rotor
       size_t size = rotor->GetResolution().size();
@@ -531,6 +531,9 @@ int OBForceField::DiverseConfGen(double rmsd, unsigned int nconfs, double energy
         ss << rotor->GetBond()->GetEndAtomIdx() << " has " << size << " values" << endl;
         OBFFLog(ss.str());
       }
+    }
+    if (rotor_sizes.size() > 0 && combinations == 0) { // Overflow!
+      combinations = UINT_MAX;
     }
     cout << "..tot conformations = " << combinations << "\n";
 
