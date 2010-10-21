@@ -149,9 +149,6 @@ namespace OpenBabel
       static void AddNbrs(OBBitVec &fragment, OBAtom *atom);
 
     private:
-      //! If true, then ring conformations are taken from the input structure
-      //  (which should be 3D)
-      //bool _keeprings = false;
       //! used to hold the fragments loaded in the constructor
       static std::vector<std::pair<OBSmartsPattern*, std::vector<vector3> > > _fragments;
       //! Connect a ring fragment to an already matched fragment. Currently only
@@ -163,6 +160,7 @@ namespace OpenBabel
       static bool FixRingStereo(std::vector<std::pair<OBStereo::Ref, bool> > atomIds,
                                 OBMol &mol, OBStereo::Refs &unfixedcenters);
       static void AddRingNbrs(OBBitVec &fragment, OBAtom *atom, OBMol &mol);
+      static bool SwapWithVector(OBMol &mol, int a, int b, int c, const vector3 &newlocation);
       bool _keeprings;
   }; // class OBBuilder
 
