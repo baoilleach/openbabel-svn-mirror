@@ -974,6 +974,7 @@ namespace OpenBabel
   // avogadro's AutoOpt tool
   bool OBForceField::IsSetupNeeded(OBMol &mol)
   {
+    /*
     if (_mol.NumAtoms() != mol.NumAtoms())
       return true;
 
@@ -987,9 +988,9 @@ namespace OpenBabel
         return true;
       if (atom->BOSum() != (mol.GetAtom(atom->GetIdx()))->BOSum())
         return true;
-    }
+    }*/
 
-    return false;
+    return true; // Force setup always - this test fails incorrectly sometimes
   }
 
   bool OBForceField::GetAtomTypes(OBMol &mol)
