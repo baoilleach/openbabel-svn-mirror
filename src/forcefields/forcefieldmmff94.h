@@ -223,6 +223,8 @@ namespace OpenBabel
       std::vector<OBFFVDWCalculationMMFF94>           _vdwcalculations;
       std::vector<OBFFElectrostaticCalculationMMFF94> _electrostaticcalculations;
 
+      double E_Single_Torsion(const std::vector<int> atomrefs);
+
       bool mmff94s;
 
     public:

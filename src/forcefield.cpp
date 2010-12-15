@@ -2030,7 +2030,7 @@ namespace OpenBabel
   void OBForceField::UpdatePairsSimple()
   {
     unsigned int i = 0;
-
+    
     _vdwpairs.Clear();
     _elepairs.Clear();
 
