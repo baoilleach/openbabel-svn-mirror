@@ -449,7 +449,7 @@ namespace OpenBabel
           //cout << "Min " << minBondEnergy << "\n";
           for (j = 0; j < rotor->GetResolution().size(); j++) {
             cout << bondEnergies[j] << "\n";
-            if (bondEnergies[j] - minBondEnergy > 100.0) {
+            if (bondEnergies[j] - minBondEnergy > 70.0) {
               //cout << bondEnergies[j] - minBondEnergy << " " << i<< " " << j << "\n";
               markForRemoval.push_back( std::pair<int, int>(i, j) );
             }
