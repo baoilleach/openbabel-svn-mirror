@@ -440,7 +440,6 @@ namespace OpenBabel
   //
   // 0_ijkl 	torsion angle (degrees)
   //
-
   template<bool gradients>
   inline void OBFFTorsionCalculationMMFF94::Compute()
   {
@@ -485,35 +484,6 @@ namespace OpenBabel
 
     energy = (v1 * phi1 + v2 * phi2 + v3 * phi3);
 
-  }
-
-  double OBForceFieldMMFF94::E_Single_Torsion(const std::vector<int> atomrefs)
-  {
-    vector<OBFFTorsionCalculationMMFF94>::iterator torcalcs_it;
-    OBFFTorsionCalculationMMFF94 *answer = NULL;
-    for (torcalcs_it = _torsioncalculations.begin(); torcalcs_it != _torsioncalculations.end(); ++torcalcs_it) {
-      bool found = true;
-      vector<int> torrefs(4);
-      torrefs[0] = torcalcs_it->a->GetIdx();
-      torrefs[1] = torcalcs_it->b->GetIdx();
-      torrefs[2] = torcalcs_it->c->GetIdx();
-      torrefs[3] = torcalcs_it->d->GetIdx();
-      for (int j = 0; j < 4; ++j) {
-        if (std::find(atomrefs.begin(), atomrefs.end(), torrefs[j]) == atomrefs.end()) {
-          found = false;
-          break;
-        }
-      }
-      if (found) {
-        answer = &(*torcalcs_it);
-        break;
-      }
-    }
-
-    answer->Compute<false>();
-    double energy = answer->energy * 0.5;
-
-    return energy;
   }
 
   template<bool gradients>

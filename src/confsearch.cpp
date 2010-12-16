@@ -275,54 +275,6 @@ namespace OpenBabel
     return (a.second < b.second);
   }
 
-  // Create a lookup for the 'pair index' for a particular pair of
-  // atoms.
-  vector<int> PairLookup(OBMol& mol) 
-  {
-    vector<int> lookup(mol.NumAtoms() * mol.NumAtoms());
-    int idx = 0;
-    FOR_PAIRS_OF_MOL(p, mol)
-    {
-      lookup[((*p)[0] - 1)*mol.NumAtoms() + ((*p)[1] - 1)] = idx;
-      ++idx;
-    }
-    return lookup;
-  }
-
-  // Mark atoms around a torsion for evaluation
-  double OBForceField::GetBondEnergy(OBRotor *rotor, const vector<int> &lookup)
-  {
-    _vdwpairs.Clear();
-    _elepairs.Clear();
-
-    OBBond* bond = rotor->GetBond();
-
-    vector<OBAtom*> ends;
-    ends.push_back(bond->GetBeginAtom());
-    ends.push_back(bond->GetEndAtom());
-
-    FOR_NBORS_OF_ATOM(a, ends[0]) {
-      if (&(*a) != ends[1]) {
-        FOR_NBORS_OF_ATOM(b, ends[1]) {
-          if (&(*b) != ends[0]) {
-            int idx = (a->GetIdx() - 1)*_mol.NumAtoms() + (b->GetIdx() - 1);
-            _vdwpairs.SetBitOn(lookup[idx]);
-            _elepairs.SetBitOn(lookup[idx]);
-          }
-        }
-      }
-    }
-
-    EnableCutOff(true);
-    double energy = E_VDW(false) + E_Electrostatic(false);
-    EnableCutOff(false);
-
-    vector<int> atomrefs = rotor->GetDihedralAtoms();
-    energy += E_Single_Torsion(atomrefs);
-
-    return energy;
-  }
-
   int OBForceField::FastRotorSearch(bool permute)
   {
     if (_mol.NumRotors() == 0)
@@ -397,13 +349,8 @@ namespace OpenBabel
     for (int i=0; i<vrotors.size(); ++i)
       reordered_rotors[i] = i;
 
-    // REMOVE HIGH ENERGY TORSIONS: Initialise lookup for atom pairs
-    vector<int> lookup_pairs = PairLookup(_mol);
-    vector< pair<int, int> > markForRemoval;
-
     std::set<unsigned int> seen;
-    best_minE = DBL_MAX;
-    vector<int> best_rotorKey;
+    best_minE = DBL_MAX;  
     for (int N=0; N<num_permutations; ++N) {
       for (int i=0; i<num_rotors_to_permute; ++i)
         reordered_rotors.at(i) = *(permutations + N*4 + i);
@@ -416,8 +363,7 @@ namespace OpenBabel
         unsigned int idx = reordered_rotors[i];
         rotor = vrotors.at(idx);
         
-        minE = DBL_MAX;
-        vector<double> bondEnergies;
+        minE = DBL_MAX;  
         
         for (j = 0; j < rotor->GetResolution().size(); j++) { // For each rotor position
           // Note: we could do slightly better by skipping the rotor position we already
@@ -429,13 +375,7 @@ namespace OpenBabel
           SetupPointers();
           
           currentE = E_VDW(false) + E_Torsion(false) + E_Electrostatic(false);
-
-          if (N==0) { // Only do this on the first pass through
-            double bondE = GetBondEnergy(rotor, lookup_pairs);
-            bondEnergies.push_back(bondE);
-            // cout << "DEBUG: currentE " << currentE << " bondE " << bondE << " j " << j << " idx " << idx << "\n";
-          }
-
+          
           if (currentE < minE) {
             minE = currentE;
             minj = j;
@@ -443,18 +383,6 @@ namespace OpenBabel
           }
         } // Finished testing all positions of this rotor
         rotorKey[idx + 1] = minj;
-        
-        if (N == 0 && bondEnergies.size() > 0) { // Only do this on the first pass through
-          double minBondEnergy = *std::min_element(bondEnergies.begin(), bondEnergies.end());
-          //cout << "Min " << minBondEnergy << "\n";
-          for (j = 0; j < rotor->GetResolution().size(); j++) {
-            cout << bondEnergies[j] << "\n";
-            if (bondEnergies[j] - minBondEnergy > 70.0) {
-              //cout << bondEnergies[j] - minBondEnergy << " " << i<< " " << j << "\n";
-              markForRemoval.push_back( std::pair<int, int>(i, j) );
-            }
-          }
-        }
 
         if (i==4) { // Check whether this rotorKey has already been chosen
           // Create a hash of the rotorKeys (given that the max value of any rotorKey is 11 from torlib.txt)
@@ -473,26 +401,11 @@ namespace OpenBabel
       if (!quit) {
           if (minE < best_minE) {
             best_minE = minE;
-            best_rotorKey = rotorKey;
             memcpy((char*)verybestconf,(char*)bestconf,sizeof(double)*3*_mol.NumAtoms());
           }
       }
 
     } // end of final permutation
-
-    if (markForRemoval.size() > 0) {
-      vector< pair<int, int> > tmp;
-      for (int i = 0; i < markForRemoval.size(); ++i) {
-        pair<int, int> p = markForRemoval[i];
-        cout << "....Removing " << p.first << " " << p.second << " ";
-        if (best_rotorKey[p.first + 1] == p.second)
-          cout << "..cannot!";
-        else
-          tmp.push_back(p);
-        cout << "\n";
-      }
-      markForRemoval = tmp;
-    }
 
     _mol.SetCoordinates(verybestconf);
     SetupPointers();

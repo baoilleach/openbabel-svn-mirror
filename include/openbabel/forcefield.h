@@ -30,7 +30,6 @@ GNU General Public License for more details.
 #include <openbabel/mol.h>
 #include <openbabel/plugin.h>
 #include <openbabel/grid.h>
-#include <openbabel/rotor.h>
 #include <openbabel/griddata.h>
 #include <float.h>
 
@@ -941,7 +940,6 @@ namespace OpenBabel
      *	  see Energy()
      */
     virtual double E_Electrostatic(bool UNUSED(gradients) = true) { return 0.0f; }
-    virtual double E_Single_Torsion(const std::vector<int> atomrefs) {return 0.0f; };
     //@}
 
     /////////////////////////////////////////////////////////////////////////
@@ -1159,7 +1157,7 @@ namespace OpenBabel
      *                as long.
      */
     int FastRotorSearch(bool permute = true);
-    double GetBondEnergy(OBRotor *rotor, const std::vector<int> &lookup);
+
     int DiverseConfGen(double rmsd, unsigned int nconfs = 0, double energy_gap = 50);
 
     /////////////////////////////////////////////////////////////////////////
