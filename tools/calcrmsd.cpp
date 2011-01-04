@@ -182,13 +182,13 @@ void CalcRMSD::Run()
   unsigned int N = 0;
   OBMol rmol, tmol;
   vector<double> rmsd;
-  bool more_to_come;
 
   const double binvals_arr[8] = {0.2, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 100.0};
   vector<double> binvals(binvals_arr, binvals_arr+8);
 
   // For every test_conf there is a reference, but not v.v.
-  while (tconv.Read(&tmol)) {
+  bool more_to_come = tconv.Read(&tmol);
+  while (more_to_come) {
     N++;
     string title = tmol.GetTitle();
 
