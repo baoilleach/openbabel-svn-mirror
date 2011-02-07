@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ***********************************************************************/
 
-#define CONFAB_VER "0.2"
+#define CONFAB_VER "1.0"
 
 // used to set import/export for Cygwin DLLs
 #ifdef WIN32
