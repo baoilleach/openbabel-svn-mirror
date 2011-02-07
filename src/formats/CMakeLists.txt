@@ -175,9 +175,9 @@ if(MINIMAL_BUILD)
 else(MINIMAL_BUILD)
   set(formats
       ${formats_common}
-      //${formats_utility}
-      //${formats_compchem}
-      //${formats_misc}
+      # ${formats_utility}
+      # ${formats_compchem}
+      # ${formats_misc}
   )
 endif(MINIMAL_BUILD)
 
