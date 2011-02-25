@@ -40,7 +40,7 @@ using namespace OpenBabel;
 class Confab
 {
 public:
-  Confab(OBConversion &conv, double rmsd_cutoff, double energy_cutoff, int conf_cutoff, bool verbose);
+  Confab(OBConversion &conv, double rmsd_cutoff, double energy_cutoff, int conf_cutoff, bool verbose, bool include_original);
   void DisplayConfig();
   void Run();
 private:
@@ -48,6 +48,7 @@ private:
   double energy_cutoff;
   unsigned int conf_cutoff;
   bool verbose;
+  bool include_original;
   OBConversion &conv;
   OBForceField *pff;
 };
@@ -66,9 +67,10 @@ int main(int argc,char **argv)
   float rmsd_cutoff = 0.5, energy_cutoff = 50.0;
   unsigned int conf_cutoff = 1000000; // 1 Million
   bool verbose = false;
+  bool include_original = false;
 
   // Parse options
-  while ((c = getopt(argc, argv, "i:o:r:e:c:v")) != -1)
+  while ((c = getopt(argc, argv, "i:o:r:e:c:v:a")) != -1)
     {
 #ifdef _WIN32
 	    char optopt = c;
@@ -127,6 +129,9 @@ int main(int argc,char **argv)
         case 'v': // verbose
           verbose = true;
           break;
+        case 'a': // include input structure as first conformer
+          include_original = true;
+          break;
         case '?':
           if (isprint (optopt))
             fprintf (stderr, "Unknown option `-%c'.\n", optopt);
@@ -150,6 +155,7 @@ int main(int argc,char **argv)
       err += "   -r <rmsd>   RMSD cutoff (default 0.5 Angstrom)\n";
       err += "   -e <energy> Energy cutoff (default 50.0 kcal/mol)\n";
       err += "   -c <#confs> Max number of conformers to test (default is 1 million)\n";
+      err += "   -a          Include the input conformation as the first conformer\n";
       err += "   -v          Verbose - display information on torsions found\n";
       cerr << err << ends;
       exit(-1);
@@ -198,7 +204,7 @@ int main(int argc,char **argv)
   cout << "..Input file = " << inputfile << endl;
   cout << "..Output file = " << outputfile << endl;
 
-  Confab confab(conv, rmsd_cutoff, energy_cutoff, conf_cutoff, verbose);
+  Confab confab(conv, rmsd_cutoff, energy_cutoff, conf_cutoff, verbose, include_original);
   confab.DisplayConfig();
   confab.Run();
 
@@ -206,8 +212,8 @@ int main(int argc,char **argv)
 
 }
 
-Confab::Confab(OBConversion &conv, double rmsd_cutoff, double energy_cutoff, int conf_cutoff, bool verbose):
-conv(conv), rmsd_cutoff(rmsd_cutoff), energy_cutoff(energy_cutoff), conf_cutoff(conf_cutoff), verbose(verbose)
+Confab::Confab(OBConversion &conv, double rmsd_cutoff, double energy_cutoff, int conf_cutoff, bool verbose, bool include_original):
+conv(conv), rmsd_cutoff(rmsd_cutoff), energy_cutoff(energy_cutoff), conf_cutoff(conf_cutoff), verbose(verbose), include_original(include_original)
 {
   pff = OpenBabel::OBForceField::FindType("mmff94");
   if (!pff) {
@@ -240,10 +246,12 @@ void Confab::Run()
     pff->DiverseConfGen(rmsd_cutoff, conf_cutoff, energy_cutoff);
 
     pff->GetConformers(mol);
-    int nconfs = mol.NumConformers();
+    int nconfs = include_original ? mol.NumConformers() : mol.NumConformers() - 1;
+    
     cout << "..generated " << nconfs << " conformers" << endl;
 
-    unsigned int c = 0;
+    unsigned int c = include_original ? 0 : 1;
+
     for (; c < mol.NumConformers(); ++c) {
       mol.SetConformer(c);
       if(!conv.GetOutFormat()->WriteMolecule(&mol, &conv))
@@ -261,5 +269,6 @@ void Confab::DisplayConfig()
   cout << "..RMSD cutoff = " << rmsd_cutoff << endl;
   cout << "..Energy cutoff = " << energy_cutoff << endl;
   cout << "..Conformer cutoff = " << conf_cutoff << endl;
+  cout << "..Write input conformation? " << (include_original ? "True" : "False") << endl;
   cout << endl;
 }
