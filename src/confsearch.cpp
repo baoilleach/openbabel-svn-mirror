@@ -577,7 +577,10 @@ int OBForceField::DiverseConfGen(double rmsd, unsigned int nconfs, double energy
       counter++;
     } while (combination != 1 && counter < nconfs); // The LFSR always terminates with a 1
     cout << "..tot confs tested = " << counter << "\n..below energy threshold = " << N_low_energy << "\n";
-    
+
+    // Reset the coordinates to those of the initial structure
+    _mol.SetCoordinates(store_initial);
+
     // Get results from the tree
     UpdateConformersFromTree(&_mol, _energies, &divposes);
     
