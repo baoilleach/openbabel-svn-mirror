@@ -361,7 +361,7 @@ namespace OpenBabel
         unsigned int idx = reordered_rotors[i];
         rotor = vrotors.at(idx);
         
-        minE = DBL_MAX;  
+        minE = DBL_MAX; minj = 0;
         
         for (j = 0; j < rotor->GetResolution().size(); j++) { // For each rotor position
           // Note: we could do slightly better by skipping the rotor position we already
